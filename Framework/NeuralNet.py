@@ -36,7 +36,7 @@ class NeuralNet:
 
     train_batch_size = 64
     test_batch_size = 256
-    session = tf.Session()
+    session = None
     accuracy = None
     optimizer = None
     y_true = None
@@ -50,6 +50,7 @@ class NeuralNet:
         self.img_size_flat = img_size * img_size
         self.img_shape = (img_size, img_size)
         self.dataset = dataset
+        self.session = tf.Session()
         self.run()
 
     def new_weights(self, shape):
@@ -159,10 +160,10 @@ class NeuralNet:
 
         return layer
 
-    def print_test_accuracy(self, show_example_errors=False):
+    def get_test_accuracy(self, show_example_errors=False):
 
         # Number of images in the test-set.
-        num_test = len(self.dataset.get_testing_data())
+        num_test = len(self.dataset.testing_images)
 
         # Allocate an array for the predicted classes which
         # will be calculated in batches and filled into this array.
@@ -180,14 +181,14 @@ class NeuralNet:
             j = min(i + self.test_batch_size, num_test)
 
             # Get the images from the test-set between index i and j.
-            images = self.dataset.get_testing_data()[i:j]
+            images = self.dataset.testing_images[i:j]
 
             # Get the associated labels.
-            labels = self.dataset.get_testing_labels()[i:j]
+            labels = self.dataset.testing_labels[i:j]
 
             # Create a feed-dict with these images and labels.
-            feed_dict = {"x:0": images,
-                         "y_true:0": labels}
+            feed_dict = {self.x: images,
+                         self.y_true: labels}
 
             # Calculate the predicted class using TensorFlow.
             cls_pred[i:j] = self.session.run(self.y_pred_cls, feed_dict=feed_dict)
@@ -197,7 +198,7 @@ class NeuralNet:
             i = j
 
         # Convenience variable for the true class-numbers of the test-set.
-        cls_true = self.dataset.get_testing_cls()
+        cls_true = self.dataset.testing_cls
 
         # Create a boolean array whether each image is correctly classified.
         correct = (cls_true == cls_pred)
@@ -219,6 +220,8 @@ class NeuralNet:
             print("Example errors:")
             self.plot_example_errors(cls_pred=cls_pred, correct=correct)
 
+        return acc
+
     def plot_example_errors(self, cls_pred, correct):
         # This function is called from print_test_accuracy() below.
 
@@ -233,13 +236,13 @@ class NeuralNet:
 
         # Get the images from the test-set that have been
         # incorrectly classified.
-        images = self.dataset.get_testing_data()[incorrect]
+        images = self.dataset.testing_images[incorrect]
 
         # Get the predicted classes for those images.
         cls_pred = cls_pred[incorrect]
 
         # Get the true classes for those images.
-        cls_true = self.dataset.get_testing_cls()[incorrect]
+        cls_true = self.dataset.testing_cls[incorrect]
 
         # Plot the first 9 images.
         self.dataset.plot_images(images=images[0:9],
@@ -262,8 +265,8 @@ class NeuralNet:
 
             # Put the batch into a dict with the proper names
             # for placeholder variables in the TensorFlow graph.
-            feed_dict_train = {'x:0': x_batch,
-                               'y_true:0': y_true_batch}
+            feed_dict_train = {self.x: x_batch,
+                               self.y_true: y_true_batch}
 
             # Run the optimizer using this batch of training data.
             # TensorFlow assigns the variables in feed_dict_train
@@ -293,11 +296,15 @@ class NeuralNet:
         # Print the time-usage.
         print("Time usage: " + str(timedelta(seconds=int(round(time_dif)))))
 
+
+    def close(self):
+        self.session.close()
+
     def run(self):
         # START CONVOLUTION
 
-        x = tf.placeholder(tf.float32, shape=[None, self.img_size_flat], name='x')
-        x_image = tf.reshape(x, [-1, self.img_size, self.img_size, self.num_channels])
+        self.x = tf.placeholder(tf.float32, shape=[None, self.img_size_flat], name='x')
+        x_image = tf.reshape(self.x, [-1, self.img_size, self.img_size, self.num_channels])
         self.y_true = tf.placeholder(tf.float32, shape=[None, 10], name='y_true')
         self.y_true_cls = tf.argmax(self.y_true, dimension=1)
         layer_conv1, weights_conv1 = \

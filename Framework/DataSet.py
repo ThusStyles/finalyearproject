@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 class DataSet:
 
     training_limit = 100
+    all_images = []
     training_images = []
     testing_images = []
     training_labels = []
@@ -20,29 +21,43 @@ class DataSet:
     epochs_completed = 0
 
     img_shape = ()
-    base_dir = "/Users/theostyles/PycharmProjects/extractLetters/"
+    base_dir = os.path.dirname(os.path.realpath(__file__)) + "\\..\\"
 
-    def __init__(self, training_limit, img_size):
-        self.training_limit = training_limit
+    def __init__(self, img_size):
         self.img_shape = (img_size, img_size)
 
-    def get_training_cls(self):
-        return self.training_cls
+    def set_training_limit(self, training_limit):
+        self.index_in_epoch = 0
+        self.total_iterations = 0
+        self.epochs_completed = 0
+        self.training_limit = training_limit
+        self.training_images = []
+        self.testing_images = []
+        self.training_labels = []
+        self.testing_labels = []
 
-    def get_testing_cls(self):
-        return self.testing_cls
+        for x in self.all_images[0:self.training_limit]:
+            self.training_labels.append(x[0])
+            self.training_images.append(x[1])
 
-    def get_training_data(self):
-        return self.training_images
+        max_limit = len(self.all_images) if (self.training_limit + 5000 > len(self.all_images)) else  (self.training_limit + 5000)
 
-    def get_training_labels(self):
-        return self.training_labels
+        for x in self.all_images[self.training_limit:max_limit]:
+            self.testing_labels.append(x[0])
+            self.testing_images.append(x[1])
 
-    def get_testing_data(self):
-        return self.testing_images
+        self.training_labels = np.array(self.training_labels)
+        self.training_images = np.array(self.training_images)
+        self.testing_images = np.array(self.testing_images)
+        self.testing_labels = np.array(self.testing_labels)
+        self.testing_cls = np.argmax(self.testing_labels, axis=1)
+        self.training_cls = np.argmax(self.training_labels, axis=1)
 
-    def get_testing_labels(self):
-        return self.testing_labels
+        print(len(self.training_images))
+        print(len(self.testing_images))
+        print(len(self.testing_cls))
+        print(len(self.training_cls))
+
 
     def plot_images(self, images, cls_true, cls_pred=None):
         assert len(images) == len(cls_true)
@@ -73,7 +88,9 @@ class DataSet:
         # in a single Notebook cell.
         plt.show()
 
+
     def next_batch(self, batch_size):
+        batch_size = min(batch_size, self.training_limit)
         start = self.index_in_epoch
         self.index_in_epoch += batch_size
         if self.index_in_epoch > self.training_limit:
@@ -93,8 +110,6 @@ class DataSet:
 
     def get_data(self):
 
-        all_images = []
-
         for x in range(10):
             dir = self.base_dir + str(x) + "-cropped"
             os.chdir(dir)
@@ -103,26 +118,11 @@ class DataSet:
             for f in filelist:
                 one_hot = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                 one_hot[x] = 1
-                all_images.append((one_hot, io.imread(f, as_grey=True).reshape(-1)))
+                self.all_images.append((one_hot, io.imread(f, as_grey=True).reshape(-1)))
 
-        random.shuffle(all_images)
+        random.shuffle(self.all_images)
 
-        for x in all_images[0:self.training_limit]:
-            self.training_labels.append(x[0])
-            self.training_images.append(x[1])
-
-        max_limit = len(all_images) if (self.training_limit + 5000 > len(all_images)) else  (self.training_limit + 5000)
-
-        for x in all_images[self.training_limit:max_limit]:
-            self.testing_labels.append(x[0])
-            self.testing_images.append(x[1])
-
-        self.training_labels = np.array(self.training_labels)
-        self.training_images = np.array(self.training_images)
-        self.testing_images = np.array(self.testing_images)
-        self.testing_labels = np.array(self.testing_labels)
-        self.testing_cls = np.argmax(self.testing_labels, axis=1)
-        self.training_cls = np.argmax(self.training_labels, axis=1)
+        self.set_training_limit(self.training_limit)
 
         print("Size of:")
         print("- Training-set:\t\t{}".format(len(self.training_images)))
