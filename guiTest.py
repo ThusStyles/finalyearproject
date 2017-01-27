@@ -4,7 +4,7 @@ import time
 from PyQt5.QtCore import *
 
 from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QListWidget, QListWidgetItem,
-    QLabel, QApplication, QGridLayout, QListView, QMainWindow)
+    QLabel, QApplication, QGridLayout, QListView, QMainWindow, QAbstractItemView)
 from PyQt5.QtGui import (QPixmap, QIcon, QImage)
 
 class PopulateCarpet(QObject):
@@ -41,16 +41,24 @@ class Example(QWidget):
         item.setIcon(icon)
         self.list_widgets[index].addItem(item)
 
+    def did_double_click(self, item):
+        print("Done")
+        print(item)
+        self.list_widgets[0].takeItem(self.list_widgets[0].row(item))
+
     def initUI(self):
         hbox = QGridLayout(self)
 
-        for i in range(10):
+        for i in range(1):
             list_widget = QListWidget(self)
 
             list_widget.setFlow(QListView.LeftToRight)
             list_widget.setResizeMode(QListView.Adjust)
             list_widget.setGridSize(QSize(30, 30))
             list_widget.setViewMode(QListView.IconMode)
+            list_widget.setDragDropMode(QAbstractItemView.InternalMove)
+            list_widget.setDragEnabled(False)
+            list_widget.itemDoubleClicked.connect(self.did_double_click)
             self.list_widgets.append(list_widget)
 
             # 1 - create Worker and Thread inside the Form

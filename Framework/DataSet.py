@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 class DataSet:
 
     training_limit = 100
+    testing_limit = 100
     all_images = []
     training_images = []
     testing_images = []
@@ -21,7 +22,7 @@ class DataSet:
     epochs_completed = 0
 
     img_shape = ()
-    base_dir = os.path.dirname(os.path.realpath(__file__)) + "\\..\\"
+    base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../"
 
     def __init__(self, img_size):
         self.img_shape = (img_size, img_size)
@@ -40,7 +41,7 @@ class DataSet:
             self.training_labels.append(x[0])
             self.training_images.append(x[1])
 
-        max_limit = len(self.all_images) if (self.training_limit + 5000 > len(self.all_images)) else  (self.training_limit + 5000)
+        max_limit = len(self.all_images) if (self.training_limit + self.testing_limit > len(self.all_images)) else  (self.training_limit + self.testing_limit)
 
         for x in self.all_images[self.training_limit:max_limit]:
             self.testing_labels.append(x[0])
@@ -108,7 +109,7 @@ class DataSet:
         end = self.index_in_epoch
         return self.training_images[start:end], self.training_labels[start:end]
 
-    def get_data(self):
+    def get_data(self, callback=None):
 
         for x in range(10):
             dir = self.base_dir + str(x) + "-cropped"
@@ -120,6 +121,8 @@ class DataSet:
                 one_hot[x] = 1
                 self.all_images.append((one_hot, io.imread(f, as_grey=True).reshape(-1)))
 
+            if callback: callback((x + 1) / 10)
+
         random.shuffle(self.all_images)
 
         self.set_training_limit(self.training_limit)
@@ -127,7 +130,6 @@ class DataSet:
         print("Size of:")
         print("- Training-set:\t\t{}".format(len(self.training_images)))
         print("- Test-set:\t\t{}".format(len(self.testing_images)))
-
 
     def resize_images(self):
         size = self.img_shape

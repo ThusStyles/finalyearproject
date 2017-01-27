@@ -160,7 +160,7 @@ class NeuralNet:
 
         return layer
 
-    def get_test_accuracy(self, show_example_errors=False):
+    def get_test_accuracy(self, show_example_errors=False, callback=None):
 
         # Number of images in the test-set.
         num_test = len(self.dataset.testing_images)
@@ -215,6 +215,9 @@ class NeuralNet:
         msg = "Accuracy on Test-Set: {0:.1%} ({1} / {2})"
         print(msg.format(acc, correct_sum, num_test))
 
+        if callback: callback(acc, cls_pred)
+
+
         # Plot some examples of mis-classifications, if desired.
         if show_example_errors:
             print("Example errors:")
@@ -249,7 +252,7 @@ class NeuralNet:
                     cls_true=cls_true[0:9],
                     cls_pred=cls_pred[0:9])
 
-    def optimize(self, num_iterations):
+    def optimize(self, num_iterations, callback=None):
         # Ensure we update the global variable rather than a local copy.
 
         # Start-time used for printing time-usage below.
@@ -272,6 +275,8 @@ class NeuralNet:
             # TensorFlow assigns the variables in feed_dict_train
             # to the placeholder variables and then runs the optimizer.
             self.session.run(self.optimizer, feed_dict=feed_dict_train)
+
+            if callback: callback((i + 1) / num_iterations)
 
             # Print status every 100 iterations.
             if i % 100 == 0:
