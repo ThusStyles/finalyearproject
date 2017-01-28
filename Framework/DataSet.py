@@ -27,6 +27,44 @@ class DataSet:
     def __init__(self, img_size):
         self.img_shape = (img_size, img_size)
 
+    def add_to_training_data(self, digits, image_data):
+        if len(digits) == 0: return
+
+        self.training_images = self.training_images.tolist()
+        self.training_labels = self.training_labels.tolist()
+
+        for i, digit in enumerate(digits):
+            one_hot = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            one_hot[digit] = 1
+            self.training_images.append(image_data[i])
+            self.training_labels.append(one_hot)
+
+        self.training_labels = np.array(self.training_labels)
+        self.training_images = np.array(self.training_images)
+        self.training_cls = np.argmax(self.training_labels, axis=1)
+        self.index_in_epoch = 0
+        self.total_iterations = 0
+        self.epochs_completed = 0
+        self.training_limit = len(self.training_images)
+
+        print(self.training_limit)
+
+
+    def new_testing_data(self):
+        self.testing_images = []
+        self.testing_labels = []
+        old_limit = self.max_limit
+        self.max_limit = min(len(self.all_images), (self.max_limit + self.testing_limit))
+
+        for x in self.all_images[old_limit:self.max_limit]:
+            self.testing_labels.append(x[0])
+            self.testing_images.append(x[1])
+
+        self.testing_images = np.array(self.testing_images)
+        self.testing_labels = np.array(self.testing_labels)
+        self.testing_cls = np.argmax(self.testing_labels, axis=1)
+
+
     def set_training_limit(self, training_limit):
         self.index_in_epoch = 0
         self.total_iterations = 0
@@ -41,9 +79,9 @@ class DataSet:
             self.training_labels.append(x[0])
             self.training_images.append(x[1])
 
-        max_limit = len(self.all_images) if (self.training_limit + self.testing_limit > len(self.all_images)) else  (self.training_limit + self.testing_limit)
+        self.max_limit = min(len(self.all_images), (self.training_limit + self.testing_limit))
 
-        for x in self.all_images[self.training_limit:max_limit]:
+        for x in self.all_images[self.training_limit:self.max_limit]:
             self.testing_labels.append(x[0])
             self.testing_images.append(x[1])
 

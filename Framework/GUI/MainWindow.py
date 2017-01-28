@@ -12,6 +12,7 @@ img_size = 44
 base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
 gray_color_table = [qRgb(i, i, i) for i in range(256)]
 
+
 class PopulateCarpet(QObject):
 
     added = pyqtSignal(QImage)
@@ -35,15 +36,17 @@ class LoadImages(QObject):
     finished = pyqtSignal()
     one_iteration = pyqtSignal(float)
 
-    def __init__(self, limit, dataset):
+    def __init__(self, training_limit, testing_limit, dataset):
         super().__init__()
-        self.limit = limit
+        self.training_limit = training_limit
+        self.testing_limit = testing_limit
         self.dataset = dataset
 
     @pyqtSlot()
     def long_running(self):
+        self.dataset.testing_limit = self.testing_limit
         self.dataset.get_data(callback=self.finished_one_iteration)
-        self.dataset.set_training_limit(self.limit)
+        self.dataset.set_training_limit(self.training_limit)
         self.finished.emit()
 
     def finished_one_iteration(self, amount):
@@ -78,39 +81,67 @@ class RunNeuralNet(QObject):
         self.one_iteration.emit(int(amount * 100))
 
 class CustomListWidgetItem(QListWidgetItem):
-    def __init__(self, parentIndex):
+    def __init__(self, parentIndex, imageData):
         super().__init__()
         self.parentIndex = parentIndex
+        self.imageData = imageData
 
 class ImageGrid(QListWidget):
-    def __init__(self):
+    def __init__(self, label):
         super().__init__()
         self.isEmpty = True
+        self.label = label
         self.init_ui()
+
+    def toQImage(self, im, copy=False):
+        if im is None:
+            return QImage()
+
+        if im.dtype == np.uint8:
+            if len(im.shape) == 2:
+                qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_Indexed8)
+                qim.setColorTable(gray_color_table)
+                return qim.copy() if copy else qim
+
+            elif len(im.shape) == 3:
+                if im.shape[2] == 3:
+                    qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_RGB888);
+                    return qim.copy() if copy else qim
+                elif im.shape[2] == 4:
+                    qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_ARGB32);
+                    return qim.copy() if copy else qim
 
     @pyqtSlot(QImage)
     def add_image(self, image, index):
         if self.isEmpty:
-            self.clear()
+            super().clear()
             self.setGridSize(QSize(30, 30))
-        item = CustomListWidgetItem(index)
-        pixmap = QPixmap(72, 72)
+        item = CustomListWidgetItem(index, image)
+        image = image.reshape(44, -1)
+        image = self.toQImage(image)
+        pixmap = QPixmap(img_size, img_size)
         pixmap.convertFromImage(image)
         icon = QIcon(pixmap)
         item.setIcon(icon)
         super().addItem(item)
         self.isEmpty = False
 
+    def clear(self):
+        self.setGridSize(QSize(30, 30))
+        self.isEmpty = True
+        super().clear()
+        super().addItem(QListWidgetItem("Empty"))
+
     def takeItem(self, p_int):
         if self.count() == 1:
             self.isEmpty = True
-            self.setGridSize(QSize(60, 60))
+            self.setGridSize(QSize(img_size, img_size))
             super().addItem(QListWidgetItem("Empty"))
         return super().takeItem(p_int)
 
     def addItem(self, item):
         if self.isEmpty:
-            self.clear()
+            super().clear()
             self.setGridSize(QSize(30, 30))
         self.isEmpty = False
         super().addItem(item)
@@ -126,8 +157,8 @@ class ImageGrid(QListWidget):
     def add_files(self, file_list):
         # 1 - create Worker and Thread inside the Form
         self.isEmpty = False
-        self.clear()
-        self.setGridSize(QSize(30, 30))
+        super().clear()
+        self.setGridSize(QSize(img_size, img_size))
         self.obj = PopulateCarpet(file_list)  # no parent!
         self.thread = QThread()  # no parent!
 
@@ -194,12 +225,20 @@ class MainWindow(QDialog):
         self.trainingAmountLayout.addWidget(self.trainingAmountLabel)
         self.trainingAmountLayout.addWidget(self.trainingAmount)
 
+        self.testingAmountLayout = QHBoxLayout()
+        self.testingAmountLabel = QLabel()
+        self.testingAmountLabel.setText("Testing amount")
+        self.testingAmount = QLineEdit(self)
+        self.testingAmount.setText("100")
+        self.testingAmountLayout.addWidget(self.testingAmountLabel)
+        self.testingAmountLayout.addWidget(self.testingAmount)
+
         # LEFT AREA - BUTTON AREA
 
         self.buttonsLayout = QHBoxLayout()
 
         self.load_button = QPushButton('Load Images', self)
-        self.load_button.setToolTip('Loading the requested number of images')
+        self.load_button.setToolTip('Loads the requested number of images')
         self.load_button.clicked.connect(self.load_clicked)
 
         self.run_button = QPushButton('Run', self)
@@ -211,6 +250,7 @@ class MainWindow(QDialog):
         self.buttonsLayout.addWidget(self.run_button)
 
         self.leftArea.addLayout(self.trainingAmountLayout)
+        self.leftArea.addLayout(self.testingAmountLayout)
         self.leftArea.addLayout(self.buttonsLayout)
 
         self.accuracyLabel = QLabel()
@@ -223,7 +263,7 @@ class MainWindow(QDialog):
         self.imageAreas = []
 
         for i in range(10):
-            item = ImageGrid()
+            item = ImageGrid(str(i))
             item.itemDoubleClicked.connect(self.double_clicked_predicted)
             self.imageAreas.append(item)
             self.middleArea.addWidget(item)
@@ -231,7 +271,7 @@ class MainWindow(QDialog):
         self.grid.addLayout(self.middleArea, 0, 1)
 
         self.rightArea = QVBoxLayout()
-        self.validationArea = ImageGrid()
+        self.validationArea = ImageGrid(str("validation"))
         self.validationArea.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
         self.rightArea.addWidget(self.validationArea)
@@ -295,24 +335,6 @@ class MainWindow(QDialog):
     def update_progress(self, amount):
         self.progress.setValue(amount)
 
-    def toQImage(self, im, copy=False):
-        if im is None:
-            return QImage()
-
-        if im.dtype == np.uint8:
-            if len(im.shape) == 2:
-                qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_Indexed8)
-                qim.setColorTable(gray_color_table)
-                return qim.copy() if copy else qim
-
-            elif len(im.shape) == 3:
-                if im.shape[2] == 3:
-                    qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_RGB888);
-                    return qim.copy() if copy else qim
-                elif im.shape[2] == 4:
-                    qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_ARGB32);
-                    return qim.copy() if copy else qim
-
     def testing_finished(self, accuracy, cls_pred):
         print(accuracy)
         print(cls_pred)
@@ -322,8 +344,6 @@ class MainWindow(QDialog):
             image = self.dataset.testing_images[i]
             imageAreaForDigit = self.imageAreas[predicted]
             print(image.reshape(44, -1))
-            image = image.reshape(44, -1)
-            image = self.toQImage(image)
             imageAreaForDigit.add_image(image, predicted)
 
     def created_neural_net(self, neuralNet):
@@ -332,9 +352,28 @@ class MainWindow(QDialog):
 
     @pyqtSlot()
     def run_clicked(self):
+        self.testingAmount.setDisabled(True)
+        self.trainingAmount.setDisabled(True)
         self.load_button.setDisabled(True)
         self.run_button.setText("Running...")
         self.run_button.setDisabled(True)
+
+        digits = []
+        image_data = []
+
+        for imageArea in self.imageAreas:
+            if imageArea.isEmpty: continue
+            for index in range(imageArea.count()):
+                item = imageArea.item(index)
+                if item == None: continue
+                print(item)
+                digits.append(item.parentIndex)
+                image_data.append(item.imageData)
+            imageArea.clear()
+
+        print("ADDING ", len(image_data), "ITEMS")
+        self.dataset.add_to_training_data(digits, image_data)
+        self.dataset.new_testing_data()
 
         self.progress.setDefault()
         self.obj = RunNeuralNet(self.dataset)  # no parent!
@@ -351,11 +390,13 @@ class MainWindow(QDialog):
     @pyqtSlot()
     def load_clicked(self):
         print('Load images')
+        self.testingAmount.setDisabled(True)
+        self.trainingAmount.setDisabled(True)
         self.load_button.setText("Loading...")
         self.load_button.setDisabled(True)
         self.progress.setDefault()
         self.dataset = DataSet(img_size)
-        self.obj = LoadImages(int(self.trainingAmount.text()), self.dataset)  # no parent!
+        self.obj = LoadImages(int(self.trainingAmount.text()), int(self.testingAmount.text()), self.dataset)  # no parent!
         self.thread = QThread()  # no parent!
 
         self.obj.moveToThread(self.thread)
