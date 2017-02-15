@@ -169,6 +169,31 @@ class DataSet:
         print("- Training-set:\t\t{}".format(len(self.training_images)))
         print("- Test-set:\t\t{}".format(len(self.testing_images)))
 
+
+    def resize_images_in_folder(self, folder_name):
+        size = self.img_shape
+        dir = folder_name
+        os.chdir(dir)
+        filelist = [f for f in os.listdir(dir) if f.endswith(".tif")]
+
+        for f in filelist:
+            image = Image.open(dir + "/" + f)
+            image = image.convert('L')
+            image = ImageOps.invert(image)
+            image = ImageOps.grayscale(image)
+            image.thumbnail(size, Image.ANTIALIAS)
+            image_size = image.size
+
+            thumb = image.crop((0, 0, size[0], size[1]))
+
+            offset_x = max((size[0] - image_size[0]) // 2, 0)
+            offset_y = max((size[1] - image_size[1]) // 2, 0)
+
+            thumb = ImageChops.offset(thumb, offset_x, offset_y)
+            F_OUT = dir + "-cropped/" + f
+
+            thumb.save(F_OUT)
+
     def resize_images(self):
         size = self.img_shape
         # Empty results
