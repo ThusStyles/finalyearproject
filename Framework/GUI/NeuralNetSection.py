@@ -1,9 +1,11 @@
 import os
 
 from PyQt5.QtCore import *
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QAbstractItemView, QInputDialog, QMessageBox
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QAbstractItemView, QInputDialog, \
+    QMessageBox, QLineEdit, QComboBox
+from PyQt5.QtGui import QStandardItem
 
-from Framework.GUI.Components import ImageGrid, CustomPushButton
+from Framework.GUI.Components import ImageGrid, CustomPushButton, CustomComboBox, Set
 
 img_size = 44
 base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
@@ -16,27 +18,63 @@ class NeuralNetSection(QWidget):
         self.main_window = main_window
         self.init_ui()
         self.sets = []
+        self.expand_state = False
+        self.selected_items = []
+
+    def expand_clicked(self):
+        if self.expand_state:
+            self.expand_all()
+            self.expand_all_button.setText("Hide all -")
+        else:
+            self.hide_all()
+            self.expand_all_button.setText("Expand all +")
+
+        self.expand_state = not self.expand_state
+
+
+    def expand_all(self):
+        for set in self.sets:
+            set.expand()
+
+    def hide_all(self):
+        for set in self.sets:
+            set.hide()
+
+    def clicked_set(self, set):
+        othersSelected = False
+        for otherSet in self.sets:
+            if len(otherSet.image_grid.selectedIndexes()) > 0:
+                othersSelected = True
+                break
+        if not othersSelected: return
+        if len(set.image_grid.selectedIndexes()) > 0: return
+
+        print("None selected on set " + set.name)
+
+        reply = QMessageBox.question(self, 'Message',
+                                           "Are you sure you want to add items to set " + set.name + "?",
+                                     QMessageBox.Yes, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            for oneSet in self.sets:
+                selectedItems = oneSet.image_grid.selectedItems()
+                for selectedItem in selectedItems:
+                    item = oneSet.takeItem(oneSet.image_grid.row(selectedItem))
+                    set.addItem(item)
+
+        set.hidden = True
+
 
     def create_new_set(self, name, items):
-        set_widget = QWidget()
-        overall_layout = QVBoxLayout()
-        label = QLabel("Set - " + name)
-        overall_layout.setContentsMargins(0, 0, 0, 0)
-        overall_layout.setSpacing(0)
-        set_widget.setObjectName("setLayout")
-        label.setObjectName("setLabel")
-        image_grid = ImageGrid(name, self.data_panel)
-        self.sets.append(image_grid)
-        overall_layout.addWidget(label)
-        overall_layout.addWidget(image_grid)
-        set_widget.setLayout(overall_layout)
+        new_set = Set(name, items, self.data_panel)
+        new_set.clicked_label.connect(self.clicked_set)
+        self.sets.append(new_set)
+        if self.empty_label:
+            self.main_layout.removeWidget(self.empty_label)
+            self.empty_label.deleteLater()
+            self.empty_label = None
 
-        self.main_widget.layout().insertWidget(self.main_widget.layout().count() - 1, set_widget)
-
-        for item in items:
-            item.parentIndex = name
-            print(item)
-            image_grid.addItem(item)
+        self.main_layout.insertWidget(self.main_layout.count() - 1, new_set)
 
 
     def ask_for_set_name(self):
@@ -52,7 +90,7 @@ class NeuralNetSection(QWidget):
                 exists = False
                 setToAdd = None
                 for set in self.sets:
-                    if set.label == text:
+                    if set.name == text:
                         exists = True
                         setToAdd = set
 
@@ -83,7 +121,6 @@ class NeuralNetSection(QWidget):
         self.top_layout = QHBoxLayout()
 
         self.initial_image_grid = ImageGrid("Initial")
-        self.initial_image_grid.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.add_button = CustomPushButton("+")
         self.trash_button = CustomPushButton("Delete")
 
@@ -101,9 +138,28 @@ class NeuralNetSection(QWidget):
 
         self.overall_layout.addLayout(self.top_layout)
 
+        self.buttons_layout = QHBoxLayout()
+        self.expand_all_button = CustomPushButton("Hide All -")
+        self.expand_all_button.clicked.connect(self.expand_clicked)
+
+        self.search_field = QLineEdit()
+        self.search_field.setAttribute(Qt.WA_MacShowFocusRect, False)
+        self.search_field.setObjectName("searchField")
+        self.search_field.setPlaceholderText("Search for sets...")
+        self.sort_button = CustomComboBox()
+
+        self.sort_button.addItem("Name (Ascending)")
+        self.sort_button.addItem("Name (Descending)")
+        self.sort_button.addItem("Item count (Ascending)")
+        self.sort_button.addItem("Item count (Descending)")
+        self.sort_button.setEditable(False)
+        self.buttons_layout.addWidget(self.expand_all_button)
+        self.buttons_layout.addWidget(self.search_field)
+        self.buttons_layout.addWidget(self.sort_button)
+
+        self.overall_layout.addLayout(self.buttons_layout)
+
         self.main_layout = QVBoxLayout()
-
-
 
         self.scroll = QScrollArea()
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -111,6 +167,8 @@ class NeuralNetSection(QWidget):
         self.scroll.setWidgetResizable(True)
 
         self.main_widget = QWidget()
+        self.empty_label = QLabel("No sets yet! Add some using the (+) button above.")
+        self.main_layout.addWidget(self.empty_label)
         self.main_layout.addStretch()
         self.main_widget.setLayout(self.main_layout)
         self.scroll.setWidget(self.main_widget)
@@ -122,9 +180,6 @@ class NeuralNetSection(QWidget):
         self.overall_layout.addWidget(self.scroll, 1)
         self.overall_layout.addStretch()
         self.setLayout(self.overall_layout)
-
-        self.overall_layout.addStretch()
-
 
 
 

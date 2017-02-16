@@ -6,6 +6,10 @@ QDialog QLabel, QMessageBox QLabel{
     color: #dfe0e6;
 }
 
+QLabel{
+    color: #dfe0e6;
+}
+
 *{
     outline: none;
 }
@@ -26,15 +30,82 @@ QScrollArea QWidget{
     background-color: #262626;
 }
 
-QPushButton{
+QPushButton, QComboBox{
     background-color: transparent;
     border: 1px solid #88898c;
     border-radius: 3px;
     color: #dfe0e6;
     padding: 5px;
+    min-height: 15px;
 }
 
-QPushButton:hover, QPushButton:pressed{
+QPushButton, QComboBox, QLineEdit{
+    min-height: 15px;
+}
+
+QComboBox:on{
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+QComboBox QListView{
+    background-color: #262626;
+    border: 1px solid #fff;
+    border-top: none;
+    border-bottom-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    padding: 5px;
+    margin-top: 0px;
+}
+
+QComboBox QAbstractItemView {
+    color: #fff;
+    selection-background-color: #202020;
+    min-height: 120px;
+    background: #262626;
+    text-transform: uppercase;
+}
+
+QComboBox QAbstractItemView::item {
+    min-height: 30px;
+    outline: none;
+    text-transform: uppercase;
+}
+
+QComboBox QListView::item:selected{
+    color: #fff;
+    background-color: #202020;
+    outline: none;
+}
+
+#searchField{
+    padding: 5px;
+}
+
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 25px;
+
+    border-left-width: 1px;
+    border-left-color: #88898c;
+    border-left-style: solid; /* just a single line */
+    border-top-right-radius: 3px; /* same radius as the QComboBox */
+    border-bottom-right-radius: 3px;
+}
+
+QComboBox::down-arrow {
+    image: url(images/down-arrow.svg);
+    width: 15px;
+    height: 15px;
+}
+
+QComboBox::drop-down:hover{
+    border-left-color: #fff;
+}
+
+QPushButton:hover, QPushButton:pressed, QComboBox:hover, QComboBox:on{
     border-color: #fff;
     color: #fff;
 }
@@ -145,10 +216,19 @@ QSplitter::handle{
 }
 
 #setLayout QLabel{
-    background: #d6d6d7;
-    padding: 6px;
-    margin-bottom: 5px;
+    padding: 5px;
+    background: transparent;
+    margin-bottom: 0px;
     font-size: 13px;
+    color: #202020;
+}
+
+#setLabel{
+    color: #202020;
+}
+
+#setLabelWidget{
+    background: #d6d6d7;
 }
 
 #tablePanel QLabel{
@@ -179,4 +259,16 @@ QHeaderView::section {
     background: #d6d6d7;
     border: 1px solid #d6d6d7;
     padding: 0 5px;
+}
+
+QScrollBar:vertical{
+    background: transparent;
+    border: none;
+    width: 10px;
+}
+
+QScrollBar::handle{
+    border-radius: 5px;
+    background: #3e3e40;
+    min-height: 30px;
 }

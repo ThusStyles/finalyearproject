@@ -3,7 +3,7 @@ import os
 import numpy as np
 from PyQt5.QtCore import *
 from PyQt5.QtGui import (QPixmap, QIcon, QImage, qRgb)
-from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QListView
+from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QListView, QAbstractItemView
 from skimage import io
 
 from . import CustomListWidgetItem
@@ -125,6 +125,10 @@ class ImageGrid(QListWidget):
         self.update_tables()
         super().addItem(QListWidgetItem("Empty"))
 
+    def count(self):
+        if self.isEmpty: return 0
+        return super().count()
+
     def takeItem(self, p_int):
         if self.count() == 1:
             self.isEmpty = True
@@ -150,6 +154,7 @@ class ImageGrid(QListWidget):
         self.setViewMode(QListView.IconMode)
         self.setDragEnabled(False)
         self.setObjectName("imageGrid")
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setAttribute(Qt.WA_MacShowFocusRect, False)
 
     def sizeHint(self):

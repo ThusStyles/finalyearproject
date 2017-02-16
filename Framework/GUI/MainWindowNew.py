@@ -62,7 +62,7 @@ class MainWindowNew(QMainWindow):
         self.main_grid.addWidget(self.right_widget)
 
         self.setCentralWidget(self.main_grid)
-        self.main_grid.setStretchFactor(0, 1)
-        self.main_grid.setStretchFactor(1, 2)
+        self.main_grid.setStretchFactor(0, 5)
+        self.main_grid.setStretchFactor(1, 7)
 
         self.show()
