@@ -1,6 +1,6 @@
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QAbstractItemView, QInputDialog, \
-    QMessageBox, QLineEdit, QComboBox
+    QMessageBox, QLineEdit, QComboBox, QMenu, QAction
 from . import ImageGrid
 
 class Set(QWidget):
@@ -24,7 +24,14 @@ class Set(QWidget):
         self.image_grid.setVisible(False)
         self.hidden = True
 
+    def toggle_visibility(self):
+        if self.hidden:
+            self.expand()
+        else:
+            self.hide()
+
     def label_clicked(self, event):
+        if event.button() == Qt.RightButton: return
         self.clicked_label.emit(self)
         if len(self.image_grid.selectedIndexes()) > 0: return
         self.image_grid.setVisible(self.hidden)
@@ -34,10 +41,21 @@ class Set(QWidget):
         self.image_grid.addItem(item)
         self.setItemCount(self.image_grid.count())
 
+    def add_image(self, image):
+        self.image_grid.add_image(image)
+        self.setItemCount(self.image_grid.count())
+
     def takeItem(self, p_int):
         item = self.image_grid.takeItem(p_int)
         self.setItemCount(self.image_grid.count())
         return item
+
+    def item(self, p_int):
+        return self.image_grid.item(p_int)
+
+    def clear(self):
+        self.image_grid.clear()
+        self.setItemCount(0)
 
     def setItemCount(self, count):
         plural = "s" if count == 0 or count > 1 else ""
@@ -85,4 +103,33 @@ class Set(QWidget):
             item.parentIndex = self.name
             print(item)
             self.image_grid.addItem(item)
+
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.on_right_click)
+
+        # create context menu
+        self.popMenu = QMenu(self)
+        hide_action = QAction('Hide/Expand', self)
+        rename_action = QAction('Rename', self)
+        delete_action = QAction('Delete', self)
+        hide_action.triggered.connect(self.toggle_visibility)
+        self.popMenu.addAction(hide_action)
+        self.popMenu.addAction(rename_action)
+        self.popMenu.addAction(delete_action)
+        self.popMenu.setStyleSheet("""
+        QMenu{
+            background: #d6d6d7;
+            color: #202020;
+        }
+        QMenu::item { /* when user selects item using mouse or keyboard */
+            padding: 3.5px 10px;
+        }
+        QMenu::item:selected { /* when user selects item using mouse or keyboard */
+            background-color: #3e3e40;
+            color: #d6d6d7;
+        }
+        """)
+
+    def on_right_click(self, point):
+        self.popMenu.exec_(self.mapToGlobal(point))
 

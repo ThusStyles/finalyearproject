@@ -1,8 +1,8 @@
-from Framework.DataSet import DataSet
-from Framework.NeuralNet import NeuralNet
-from Framework.GUI.MainWindowNew import MainWindowNew
-from PyQt5.QtWidgets import QApplication
 import sys
+
+from PyQt5.QtWidgets import QApplication
+
+from Framework.GUI.MainWindowNew import MainWindowNew
 
 app = QApplication(sys.argv)
 ex = MainWindowNew()

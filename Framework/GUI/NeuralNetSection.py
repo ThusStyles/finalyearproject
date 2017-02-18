@@ -96,6 +96,7 @@ class NeuralNetSection(QWidget):
 
                 for item in self.initial_image_grid.selectedItems():
                     taken = self.initial_image_grid.takeItem(self.initial_image_grid.row(item))
+                    taken.parentIndex = text
                     to_add.append(taken)
                     if exists:
                         setToAdd.addItem(taken)
@@ -118,13 +119,17 @@ class NeuralNetSection(QWidget):
     def init_ui(self):
         self.data_panel = self.main_window.datapanel
         self.overall_layout = QVBoxLayout()
+
+        self.top_widget = QWidget()
         self.top_layout = QHBoxLayout()
 
         self.initial_image_grid = ImageGrid("Initial")
         self.add_button = CustomPushButton("+")
         self.trash_button = CustomPushButton("Delete")
 
-        self.initial_image_grid.populate_from_folder(base_dir + "page-0400-cropped")
+        self.top_widget.setLayout(self.top_layout)
+
+        self.initial_image_grid.populate_from_folder(base_dir + "digit_testing")
 
         self.top_grid_buttons = QVBoxLayout()
         self.top_grid_buttons.addWidget(self.add_button)
@@ -136,7 +141,7 @@ class NeuralNetSection(QWidget):
         self.top_layout.addWidget(self.initial_image_grid)
         self.top_layout.addLayout(self.top_grid_buttons)
 
-        self.overall_layout.addLayout(self.top_layout)
+        self.overall_layout.addWidget(self.top_widget)
 
         self.buttons_layout = QHBoxLayout()
         self.expand_all_button = CustomPushButton("Hide All -")

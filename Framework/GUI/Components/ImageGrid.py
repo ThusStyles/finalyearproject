@@ -5,48 +5,11 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import (QPixmap, QIcon, QImage, qRgb)
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QListView, QAbstractItemView
 from skimage import io
-
+from Framework.GUI.Helpers import ImageHelpers
 from . import CustomListWidgetItem
+from Framework.GUI.ThreadOps import PopulateImageGrid
 
-gray_color_table = [qRgb(i, i, i) for i in range(256)]
 img_size = 44
-
-class PopulateCarpet(QObject):
-
-    added = pyqtSignal(CustomListWidgetItem, QImage)
-    finished = pyqtSignal()
-
-    def __init__(self, folder_name):
-        super().__init__()
-        self.folder_name = folder_name
-
-    def toQImage(self, im, copy=False):
-        if im is None:
-            return QImage()
-
-        if im.dtype == np.uint8:
-            if len(im.shape) == 2:
-                qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_Indexed8)
-                qim.setColorTable(gray_color_table)
-                return qim.copy() if copy else qim
-
-            elif len(im.shape) == 3:
-                if im.shape[2] == 3:
-                    qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_RGB888);
-                    return qim.copy() if copy else qim
-                elif im.shape[2] == 4:
-                    qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_ARGB32);
-                    return qim.copy() if copy else qim
-
-    @pyqtSlot()
-    def long_running(self):
-        for file in os.listdir(self.folder_name):
-            image = io.imread(os.path.join(self.folder_name, file), as_grey=True).reshape(-1)
-            item = CustomListWidgetItem(None, image)
-            image = image.reshape(44, -1)
-            image = self.toQImage(image)
-            self.added.emit(item, image)
-        self.finished.emit()
 
 class ImageGrid(QListWidget):
     def __init__(self, label, data_panel=None):
@@ -54,25 +17,8 @@ class ImageGrid(QListWidget):
         self.isEmpty = True
         self.label = label
         self.data_panel = data_panel
+        self.dont_update_tables = False
         self.init_ui()
-
-    def toQImage(self, im, copy=False):
-        if im is None:
-            return QImage()
-
-        if im.dtype == np.uint8:
-            if len(im.shape) == 2:
-                qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_Indexed8)
-                qim.setColorTable(gray_color_table)
-                return qim.copy() if copy else qim
-
-            elif len(im.shape) == 3:
-                if im.shape[2] == 3:
-                    qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_RGB888);
-                    return qim.copy() if copy else qim
-                elif im.shape[2] == 4:
-                    qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_ARGB32);
-                    return qim.copy() if copy else qim
 
     def add_image_from_thread(self, item, image):
         if self.isEmpty:
@@ -87,18 +33,18 @@ class ImageGrid(QListWidget):
         self.isEmpty = False
 
     def update_tables(self):
-        if self.data_panel:
+        if self.data_panel and not self.dont_update_tables:
             print("Triggered")
             count = self.count()
             self.data_panel.trainingTable.updateInfo(self.label, count)
 
-    def add_image(self, image, index):
+    def add_image(self, image):
         if self.isEmpty:
             super().clear()
             self.setGridSize(QSize(30, 30))
-        item = CustomListWidgetItem(index, image)
+        item = CustomListWidgetItem(self.label, image)
         image = image.reshape(44, -1)
-        image = self.toQImage(image)
+        image = ImageHelpers.toQImage(image)
         pixmap = QPixmap(img_size, img_size)
         pixmap.convertFromImage(image)
         icon = QIcon(pixmap)
@@ -109,7 +55,7 @@ class ImageGrid(QListWidget):
 
 
     def populate_from_folder(self, folder_name):
-        self.obj = PopulateCarpet(folder_name)  # no parent!
+        self.obj = PopulateImageGrid(folder_name)  # no parent!
         self.thread = QThread()
 
         self.obj.moveToThread(self.thread)
