@@ -271,3 +271,13 @@ QScrollBar::handle{
     background: #3e3e40;
     min-height: 30px;
 }
+
+QToolTip {
+    border: none;
+    padding: 1px;
+    border-radius: 0;
+    opacity: 250;
+    font-size: 12px;
+    color: #202020;
+    background: #d6d6d7;
+}

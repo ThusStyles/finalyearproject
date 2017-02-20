@@ -26,12 +26,11 @@ class MainWindowNew(QMainWindow):
         self.init_ui()
 
     def update_progress(self, amount):
-        print(amount)
         self.left_area.progressModule.progress.setText("Running - " + str(amount) + "%")
         self.left_area.progressModule.progress.setValue(amount)
 
     def testing_finished(self, cls_pred):
-        print(cls_pred)
+        print("CLS PRED", cls_pred)
 
         for i, predicted in enumerate(cls_pred):
             image = self.dataset.testing_images[i]

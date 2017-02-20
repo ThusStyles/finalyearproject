@@ -34,7 +34,6 @@ class ImageGrid(QListWidget):
 
     def update_tables(self):
         if self.data_panel and not self.dont_update_tables:
-            print("Triggered")
             count = self.count()
             self.data_panel.trainingTable.updateInfo(self.label, count)
 

@@ -11,13 +11,13 @@ image_dir = base_dir + "images/"
 
 class Datatable(QTableWidget):
     headers = ["Set name", "No. of items"]
+    added = pyqtSignal()
 
     def __init__(self):
         QTableWidget.__init__(self)
         self.init_ui()
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
-
 
     def init_ui(self):
         self.verticalHeader().setVisible(False)
@@ -28,7 +28,6 @@ class Datatable(QTableWidget):
         header.setDefaultAlignment(Qt.AlignLeft)
         self.setShowGrid(False)
 
-
     def addRow(self, title, items):
         rowPosition = self.rowCount()
         self.insertRow(rowPosition)
@@ -37,6 +36,7 @@ class Datatable(QTableWidget):
         item.setData(Qt.EditRole, items)
         self.setItem(rowPosition, 1, item)
         self.setRowCount(rowPosition + 1)
+        self.added.emit()
 
     def updateInfo(self, set, itemCount):
         allRows = self.rowCount()
@@ -67,6 +67,19 @@ class DataInfoPanel(QWidget):
         painter = QPainter(self)
         self.style().drawPrimitive(QStyle.PE_Widget, opt, painter, self)
 
+    def added_to_table(self):
+        self.empty_label.setVisible(False)
+        self.trainingTable.setVisible(True)
+        self.trainingViewAll.setVisible(True)
+
+    def set_testing_amount(self, amount):
+        plural = "s" if amount == 0 or amount > 1 else ""
+        self.testing_quantity.setText(str(amount) + " item" + plural)
+        if amount > 0:
+            self.testingViewAll.setVisible(True)
+        else:
+            self.testingViewAll.setVisible(False)
+
     def init_ui(self):
 
         self.layout = QVBoxLayout()
@@ -81,17 +94,23 @@ class DataInfoPanel(QWidget):
         self.training_label.setFont(font)
 
         self.trainingTable = Datatable()
+        self.empty_label = QLabel("Currently empty")
+        self.trainingTable.setVisible(False)
+        self.trainingTable.added.connect(self.added_to_table)
         self.trainingViewAll = CustomPushButton("View all")
+        self.trainingViewAll.setVisible(False)
         self.layout.addWidget(self.trainingTable)
+        self.layout.addWidget(self.empty_label)
         self.layout.addWidget(self.trainingViewAll)
 
         self.testing_label = QLabel("Test set")
         self.layout.addWidget(self.testing_label)
         self.testing_label.setFont(font)
-        self.testingTable = Datatable()
+        self.testing_quantity = QLabel("0 items")
         self.testingViewAll = CustomPushButton("View all")
-        self.layout.addWidget(self.testingTable)
+        self.layout.addWidget(self.testing_quantity)
         self.layout.addWidget(self.testingViewAll)
+        self.testingViewAll.setVisible(False)
 
         self.setContentsMargins(5, 0, 5, 0)
         self.setLayout(self.layout)

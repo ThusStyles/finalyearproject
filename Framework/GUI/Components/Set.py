@@ -65,9 +65,11 @@ class Set(QWidget):
         count = len(self.image_grid.selectedIndexes())
         if count == 0:
             self.item_selected_label.setVisible(False)
+            self.popMenu.removeAction(self.new_set_action)
         else:
             self.item_selected_label.setText("(" + str(count) + " selected)")
             self.item_selected_label.setVisible(True)
+            self.popMenu.addAction(self.new_set_action)
 
     def init_ui(self):
         self.overall_layout = QVBoxLayout()
@@ -110,8 +112,9 @@ class Set(QWidget):
         # create context menu
         self.popMenu = QMenu(self)
         hide_action = QAction('Hide/Expand', self)
-        rename_action = QAction('Rename', self)
-        delete_action = QAction('Delete', self)
+        rename_action = QAction('Rename set', self)
+        delete_action = QAction('Delete set', self)
+        self.new_set_action = QAction("Create new set with selected", self)
         hide_action.triggered.connect(self.toggle_visibility)
         self.popMenu.addAction(hide_action)
         self.popMenu.addAction(rename_action)

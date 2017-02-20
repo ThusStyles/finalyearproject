@@ -125,7 +125,9 @@ class NeuralNetSection(QWidget):
 
         self.initial_image_grid = ImageGrid("Initial")
         self.add_button = CustomPushButton("+")
+        self.add_button.setToolTip("Create a new set with the selected images")
         self.trash_button = CustomPushButton("Delete")
+        self.trash_button.setToolTip("Add to the trash set")
 
         self.top_widget.setLayout(self.top_layout)
 
@@ -145,6 +147,7 @@ class NeuralNetSection(QWidget):
 
         self.buttons_layout = QHBoxLayout()
         self.expand_all_button = CustomPushButton("Hide All -")
+        self.expand_all_button.setToolTip("Toggles visibility of sets below")
         self.expand_all_button.clicked.connect(self.expand_clicked)
 
         self.search_field = QLineEdit()
