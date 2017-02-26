@@ -40,6 +40,7 @@ class NeuralNet:
     accuracy = None
     optimizer = None
     y_true = None
+    y_pred = None
     y_pred_cls = None
     y_true_cls = None
     x = None
@@ -169,7 +170,8 @@ class NeuralNet:
 
         # Allocate an array for the predicted classes which
         # will be calculated in batches and filled into this array.
-        cls_pred = np.zeros(shape=num_test, dtype=np.int)
+        cls_pred = np.zeros(shape=(num_test, self.num_classes), dtype=np.float64)
+        keep_prob = tf.placeholder(tf.float32)
 
         # Now calculate the predicted classes for the batches.
         # We will just iterate through all the batches.
@@ -189,7 +191,9 @@ class NeuralNet:
             feed_dict = {self.x: images}
 
             # Calculate the predicted class using TensorFlow.
-            cls_pred[i:j] = self.session.run(self.y_pred_cls, feed_dict=feed_dict)
+            #cls_pred[i:j] = self.session.run(self.y_pred_cls, feed_dict=feed_dict)
+
+            cls_pred[i:j] = self.y_pred.eval(feed_dict=feed_dict, session=self.session)
 
             # Set the start-index for the next batch to the
             # end-index of the current batch.
@@ -312,8 +316,8 @@ class NeuralNet:
                                  num_outputs=self.num_classes,
                                  use_relu=False)
         print(layer_fc2)
-        y_pred = tf.nn.softmax(layer_fc2)
-        self.y_pred_cls = tf.argmax(y_pred, dimension=1)
+        self.y_pred = tf.nn.softmax(layer_fc2)
+        self.y_pred_cls = tf.argmax(self.y_pred, dimension=1)
         cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=layer_fc2,
                                                                 labels=self.y_true)
         cost = tf.reduce_mean(cross_entropy)

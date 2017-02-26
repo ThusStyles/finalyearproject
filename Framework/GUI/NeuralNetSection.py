@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollAr
     QMessageBox, QLineEdit, QComboBox
 from PyQt5.QtGui import QStandardItem
 
-from Framework.GUI.Components import ImageGrid, CustomPushButton, CustomComboBox, Set
+from Framework.GUI.Components import ImageGrid, CustomPushButton, CustomComboBox, Set, CustomDialog, ErrorDialog, InputDialog
 
 img_size = 44
 base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
@@ -13,12 +13,17 @@ base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
 
 class NeuralNetSection(QWidget):
 
-    def __init__(self, main_window):
+    added_to_set = pyqtSignal(str)
+    removed_from_set = pyqtSignal(str)
+
+    def __init__(self):
         super().__init__()
-        self.main_window = main_window
         self.init_ui()
         self.sets = []
+        self.trash_set = None
         self.expand_state = False
+        self.dont_ask = False
+        self.dont_ask_trash = False
         self.selected_items = []
 
     def expand_clicked(self):
@@ -40,10 +45,21 @@ class NeuralNetSection(QWidget):
         for set in self.sets:
             set.hide()
 
+    def trash_clicked(self):
+        if not self.dont_ask_trash:
+            ok, dont_ask_trash = CustomDialog.dialog(self, "Are you sure you want to add items to the trash set?")
+            self.dont_ask_trash = dont_ask_trash
+
+        if not self.dont_ask_trash or ok:
+            self.trash_set = self.add_or_create_set("Trash")
+            self.sets.remove(self.trash_set)
+
+
     def clicked_set(self, set):
         othersSelected = False
+        trash_selected = len(self.trash_set.image_grid.selectedIndexes()) > 0
         for otherSet in self.sets:
-            if len(otherSet.image_grid.selectedIndexes()) > 0:
+            if len(otherSet.image_grid.selectedIndexes()) > 0 or trash_selected:
                 othersSelected = True
                 break
         if not othersSelected: return
@@ -51,23 +67,67 @@ class NeuralNetSection(QWidget):
 
         print("None selected on set " + set.name)
 
-        reply = QMessageBox.question(self, 'Message',
-                                           "Are you sure you want to add items to set " + set.name + "?",
-                                     QMessageBox.Yes, QMessageBox.No)
+        if not self.dont_ask:
+            ok, dont_ask = CustomDialog.dialog(self, "Are you sure you want to add items to set " + set.name + "?")
+            self.dont_ask = dont_ask
 
-        if reply == QMessageBox.Yes:
+        if self.dont_ask or ok:
             for oneSet in self.sets:
                 selectedItems = oneSet.image_grid.selectedItems()
                 for selectedItem in selectedItems:
-                    item = oneSet.takeItem(oneSet.image_grid.row(selectedItem))
+                    item = oneSet.takeFromBoth(oneSet.image_grid.row(selectedItem))
                     set.addItem(item)
+
+            for selectedItem in self.trash_set.image_grid.selectedItems():
+                item = self.trash_set.takeFromBoth(self.trash_set.image_grid.row(selectedItem))
+                set.addItem(item)
 
         set.hidden = True
 
+    def added_to_set_event(self, set_name):
+        self.added_to_set.emit(set_name)
+
+    def removed_from_set_event(self, set_name):
+        self.removed_from_set.emit(set_name)
+
+    def is_existing_set(self, name):
+        for set in self.sets:
+            if set.name == name:
+                ErrorDialog.dialog(self, "There is already a set with this name")
+                return True
+        return False
+
+    def rename_set(self, set, new_name):
+        if self.is_existing_set(new_name): return
+        set.set_name(new_name)
+
+    def delete_set(self, to_delete):
+        for set in self.sets:
+            if set == to_delete:
+                self.main_layout.removeWidget(to_delete)
+                self.sets.remove(to_delete)
+                to_delete.deleteLater()
+
+    def create_new_set_with_selected(self, name, old_set):
+        if self.is_existing_set(name): return
+        selected = old_set.image_grid.selectedItems()
+        items = []
+        for sItem in selected:
+            item = old_set.takeItem(old_set.image_grid.row(sItem))
+            items.append(item)
+        print("ITEMS ARE ", items)
+        self.create_new_set(name, items)
+
 
     def create_new_set(self, name, items):
-        new_set = Set(name, items, self.data_panel)
-        new_set.clicked_label.connect(self.clicked_set)
+        new_set = Set(name)
+        new_set.added_image.connect(self.added_to_set_event)
+        new_set.removed_image.connect(self.removed_from_set_event)
+        new_set.clicked_set.connect(self.clicked_set)
+        new_set.create_new_set.connect(self.create_new_set_with_selected)
+        new_set.rename_set_sig.connect(self.rename_set)
+        new_set.delete_set_sig.connect(self.delete_set)
+        new_set.add_items(items)
         self.sets.append(new_set)
         if self.empty_label:
             self.main_layout.removeWidget(self.empty_label)
@@ -75,58 +135,54 @@ class NeuralNetSection(QWidget):
             self.empty_label = None
 
         self.main_layout.insertWidget(self.main_layout.count() - 1, new_set)
+        return new_set
 
+    def add_or_create_set(self, name):
+        to_add = []
+        exists = False
+        setToAdd = None
+        for set in self.sets:
+            if set.name == name:
+                exists = True
+                setToAdd = set
+
+        for item in self.initial_image_grid.selectedItems():
+            taken = self.initial_image_grid.takeItem(self.initial_image_grid.row(item))
+            to_add.append(taken)
+            if exists:
+                setToAdd.addItem(taken)
+
+        if not exists:
+            return self.create_new_set(name, to_add)
+        else:
+            return setToAdd
 
     def ask_for_set_name(self):
 
         if len(self.initial_image_grid.selectedItems()) == 0:
             self.show_error("Please select items to create a new set")
         else:
-            text, ok = QInputDialog.getText(self, 'Convolutional Neural Network: New Set', 'Enter the name for the new set:')
+            text, ok = InputDialog.dialog(self, 'Enter the name for the new set:', "Set name...")
             if len(text) == 0:
                 self.show_error("You must enter a set name")
             elif ok:
-                to_add = []
-                exists = False
-                setToAdd = None
-                for set in self.sets:
-                    if set.name == text:
-                        exists = True
-                        setToAdd = set
-
-                for item in self.initial_image_grid.selectedItems():
-                    taken = self.initial_image_grid.takeItem(self.initial_image_grid.row(item))
-                    taken.parentIndex = text
-                    to_add.append(taken)
-                    if exists:
-                        setToAdd.addItem(taken)
-
-                if not exists:
-                    self.create_new_set(text, to_add)
+                self.add_or_create_set(text)
 
 
     def show_error(self, message):
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Information)
-
-        msg.setText("Error!")
-        msg.setInformativeText(message)
-        msg.setWindowTitle("Convolutional Neural Network: Error")
-        msg.setStandardButtons(QMessageBox.Ok)
-
-        retval = msg.exec_()
+        ErrorDialog.dialog(self, message)
 
     def init_ui(self):
-        self.data_panel = self.main_window.datapanel
         self.overall_layout = QVBoxLayout()
 
         self.top_widget = QWidget()
         self.top_layout = QHBoxLayout()
 
-        self.initial_image_grid = ImageGrid("Initial")
+        self.initial_image_grid = ImageGrid()
         self.add_button = CustomPushButton("+")
         self.add_button.setToolTip("Create a new set with the selected images")
         self.trash_button = CustomPushButton("Delete")
+        self.trash_button.clicked.connect(self.trash_clicked)
         self.trash_button.setToolTip("Add to the trash set")
 
         self.top_widget.setLayout(self.top_layout)

@@ -43,8 +43,8 @@ class DataSet:
     def add_sets_to_training_data(self, numberOfSets, itemNames, images):
         if len(images) == 0 or len(itemNames) == 0: return
 
-        self.training_images = self.training_images.tolist()
-        self.training_labels = self.training_labels.tolist()
+        self.training_images = []
+        self.training_labels = []
 
         self.one_hot_size = numberOfSets
         print(self.one_hot_size)

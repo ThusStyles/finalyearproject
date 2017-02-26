@@ -20,7 +20,7 @@ class PopulateImageGrid(QObject):
         filelist = [f for f in os.listdir(self.folder_name) if f.endswith(".tif")]
         for file in filelist:
             image = io.imread(os.path.join(self.folder_name, file), as_grey=True).reshape(-1)
-            item = CustomListWidgetItem(None, image)
+            item = CustomListWidgetItem(image)
             image = image.reshape(44, -1)
             image = ImageHelpers.toQImage(image)
             self.added.emit(item, image)

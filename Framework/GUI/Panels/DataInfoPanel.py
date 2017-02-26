@@ -38,28 +38,33 @@ class Datatable(QTableWidget):
         self.setRowCount(rowPosition + 1)
         self.added.emit()
 
-    def updateInfo(self, set, itemCount):
+    def change_set(self, set, increment):
         allRows = self.rowCount()
         for row in range(0, allRows):
             name = self.item(row, 0)
-            print(name.text())
             if set == name.text():
                 item = QTableWidgetItem()
-                item.setData(Qt.EditRole, itemCount)
+                new_count = 1 if increment else -1
+                print(set, "New count", new_count)
+                item.setData(Qt.EditRole, int(self.item(row, 1).text()) + new_count)
                 self.setItem(row, 1, item)
                 self.sortItems(1, Qt.DescendingOrder)
                 return
-        print(set, itemCount)
-        self.addRow(set, itemCount)
+        self.addRow(set, 1)
         self.sortItems(1, Qt.DescendingOrder)
+
+    def increment_set(self, set):
+        self.change_set(set, True)
+
+    def decrement_set(self, set):
+        self.change_set(set, False)
 
 
 class DataInfoPanel(QWidget):
 
-    def __init__(self, main_window):
+    def __init__(self):
         super().__init__()
         self.init_ui()
-        self.main_window = main_window
 
     def paintEvent(self, event):
         opt = QStyleOption()
@@ -79,6 +84,13 @@ class DataInfoPanel(QWidget):
             self.testingViewAll.setVisible(True)
         else:
             self.testingViewAll.setVisible(False)
+
+    def increment_training_table(self, set):
+        self.trainingTable.increment_set(set)
+
+    def decrement_training_table(self, set):
+        print("decrement called")
+        self.trainingTable.decrement_set(set)
 
     def init_ui(self):
 

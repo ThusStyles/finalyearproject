@@ -10,38 +10,36 @@ from . import CustomListWidgetItem
 from Framework.GUI.ThreadOps import PopulateImageGrid
 
 img_size = 44
+grid_size_x = 33
+grid_size_y = 30
+item_size_x = 35
+item_size_y = 35
 
 class ImageGrid(QListWidget):
-    def __init__(self, label, data_panel=None):
+    def __init__(self):
         super().__init__()
         self.isEmpty = True
-        self.label = label
-        self.data_panel = data_panel
-        self.dont_update_tables = False
         self.init_ui()
 
     def add_image_from_thread(self, item, image):
         if self.isEmpty:
             super().clear()
-            self.setGridSize(QSize(30, 30))
-        pixmap = QPixmap(img_size, img_size)
+            self.setGridSize(QSize(item_size_x, item_size_y))
+        pixmap = QPixmap(item_size_x, item_size_y)
         pixmap.convertFromImage(image)
         icon = QIcon(pixmap)
         item.setIcon(icon)
         self.updateGeometry()
         super().addItem(item)
+        self.updateGeometry()
         self.isEmpty = False
-
-    def update_tables(self):
-        if self.data_panel and not self.dont_update_tables:
-            count = self.count()
-            self.data_panel.trainingTable.updateInfo(self.label, count)
 
     def add_image(self, image):
         if self.isEmpty:
             super().clear()
-            self.setGridSize(QSize(30, 30))
-        item = CustomListWidgetItem(self.label, image)
+            self.setGridSize(QSize(item_size_x, item_size_y))
+
+        item = CustomListWidgetItem(image)
         image = image.reshape(44, -1)
         image = ImageHelpers.toQImage(image)
         pixmap = QPixmap(img_size, img_size)
@@ -49,8 +47,8 @@ class ImageGrid(QListWidget):
         icon = QIcon(pixmap)
         item.setIcon(icon)
         super().addItem(item)
-        self.update_tables()
         self.isEmpty = False
+        return item
 
 
     def populate_from_folder(self, folder_name):
@@ -64,10 +62,9 @@ class ImageGrid(QListWidget):
         self.thread.start()
 
     def clear(self):
-        self.setGridSize(QSize(30, 30))
+        self.setGridSize(QSize(grid_size_x, grid_size_y))
         self.isEmpty = True
         super().clear()
-        self.update_tables()
         super().addItem(QListWidgetItem("Empty"))
 
     def count(self):
@@ -77,25 +74,26 @@ class ImageGrid(QListWidget):
     def takeItem(self, p_int):
         if self.count() == 1:
             self.isEmpty = True
-            self.setGridSize(QSize(img_size, img_size))
+            self.setGridSize(QSize(60, 60))
             super().addItem(QListWidgetItem("Empty"))
         item = super().takeItem(p_int)
-        self.update_tables()
         return item
 
     def addItem(self, item):
         if self.isEmpty:
             super().clear()
-            self.setGridSize(QSize(30, 30))
+            self.setGridSize(QSize(item_size_x, item_size_y))
         self.isEmpty = False
         super().addItem(item)
-        self.update_tables()
 
     def init_ui(self):
         super().addItem(QListWidgetItem("Empty"))
+        self.setContentsMargins(0, 0, 0, 0)
+        self.setSpacing(0)
         self.setFlow(QListView.LeftToRight)
         self.setResizeMode(QListView.Adjust)
         self.setGridSize(QSize(60, 60))
+        self.setIconSize(QSize(grid_size_x, grid_size_y))
         self.setViewMode(QListView.IconMode)
         self.setDragEnabled(False)
         self.setObjectName("imageGrid")

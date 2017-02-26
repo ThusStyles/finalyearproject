@@ -2,6 +2,7 @@ import os
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QMainWindow, QSplitter
 from PyQt5.QtCore import QThread
+import numpy as np
 
 from Framework.GUI.NeuralNetSection import NeuralNetSection
 from Framework.GUI.Panels.DataInfoPanel import DataInfoPanel
@@ -32,13 +33,17 @@ class MainWindowNew(QMainWindow):
     def testing_finished(self, cls_pred):
         print("CLS PRED", cls_pred)
 
-        for i, predicted in enumerate(cls_pred):
+        for i, prob_array in enumerate(cls_pred):
             image = self.dataset.testing_images[i]
-            labelForDigit = self.dataset.labels[predicted]
+            pred_index = np.argmax(prob_array)
+            prob = prob_array[pred_index]
+            labelForDigit = self.dataset.labels[pred_index]
             print("LABEL IS ", labelForDigit)
             for set in self.main_area.sets:
                 if set.name == labelForDigit:
-                    set.add_image(image)
+                    item = set.add_image(image)
+                    if prob <= 0.5:
+                        item.set_important()
 
     def run_neural_net(self):
         self.left_area.progressModule.progress.setDefault()
@@ -65,18 +70,14 @@ class MainWindowNew(QMainWindow):
         for set in sets:
             setCount += 1
             imageArea = set.image_grid
-            if imageArea.isEmpty: continue
-            itemCount = imageArea.count()
-            print("ITEM COUNT ", itemCount)
+            itemCount = len(set.all_images)
             for index in range(itemCount):
-                item = set.item(index)
+                item = set.all_images[index]
                 if item == None: continue
                 print(item)
-                itemNames.append(item.parentIndex)
+                itemNames.append(set.name)
                 itemData.append(item.imageData)
-            imageArea.dont_update_tables = True
             set.clear()
-            imageArea.dont_update_tables = False
 
         self.dataset.add_sets_to_training_data(setCount, itemNames, itemData)
 
@@ -95,6 +96,11 @@ class MainWindowNew(QMainWindow):
 
         self.run_neural_net()
 
+    def added_to_set(self, set_name):
+        self.datapanel.increment_training_table(set_name)
+
+    def removed_from_set(self, set_name):
+        self.datapanel.decrement_training_table(set_name)
 
     def init_ui(self):
         self.dataset = DataSet(img_size)
@@ -122,11 +128,13 @@ class MainWindowNew(QMainWindow):
         self.right_grid.setContentsMargins(0, 0, 0, 0)
         self.right_grid.setSpacing(0)
 
-        self.datapanel = DataInfoPanel(self)
+        self.datapanel = DataInfoPanel()
         self.right_grid.addWidget(self.datapanel, 0, 1)
 
         self.left_area = MenuPanel()
-        self.main_area = NeuralNetSection(self)
+        self.main_area = NeuralNetSection()
+        self.main_area.added_to_set.connect(self.added_to_set)
+        self.main_area.removed_from_set.connect(self.removed_from_set)
 
         self.toolbar = ToolbarPanel()
         self.toolbar.run_clicked.connect(self.run_clicked)
