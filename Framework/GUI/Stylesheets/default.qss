@@ -149,17 +149,25 @@ QToolButton{
     width: 14px;
 }
 
-QSplitter{
+#verticalSplitter{
     margin: 0;
     padding: 0;
 }
 
-QSplitter::handle{
+#verticalSplitter::handle{
     margin: 0;
     padding: 0;
     background: transparent;
     width: 1px;
 }
+
+#horizontalSplitter::handle{
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    height: 10px;
+}
+
 
 #menuPanel, #menuPanel QListWidget, #tablePanel{
     background-color: #202020;

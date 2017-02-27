@@ -45,6 +45,8 @@ class MainWindowNew(QMainWindow):
                     if prob <= 0.5:
                         item.set_important()
 
+        self.dataset.new_testing_data()
+
     def run_neural_net(self):
         self.left_area.progressModule.progress.setDefault()
         self.obj = RunNeuralNet(self.dataset, img_size, len(self.main_area.sets))  # no parent!
@@ -111,6 +113,7 @@ class MainWindowNew(QMainWindow):
         self.setGeometry(self.left, self.top, self.width, self.height)
 
         self.main_grid = QSplitter()
+        self.main_grid.setObjectName("verticalSplitter")
 
         self.main_grid.setContentsMargins(0, 0, 0, 0)
 

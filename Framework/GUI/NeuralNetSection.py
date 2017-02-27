@@ -2,7 +2,7 @@ import os
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QAbstractItemView, QInputDialog, \
-    QMessageBox, QLineEdit, QComboBox
+    QMessageBox, QLineEdit, QComboBox, QSplitter
 from PyQt5.QtGui import QStandardItem
 
 from Framework.GUI.Components import ImageGrid, CustomPushButton, CustomComboBox, Set, CustomDialog, ErrorDialog, InputDialog
@@ -24,6 +24,7 @@ class NeuralNetSection(QWidget):
         self.expand_state = False
         self.dont_ask = False
         self.dont_ask_trash = False
+        self.current_index = 0
         self.selected_items = []
 
     def expand_clicked(self):
@@ -46,13 +47,18 @@ class NeuralNetSection(QWidget):
             set.hide()
 
     def trash_clicked(self):
+        ok = False
         if not self.dont_ask_trash:
             ok, dont_ask_trash = CustomDialog.dialog(self, "Are you sure you want to add items to the trash set?")
             self.dont_ask_trash = dont_ask_trash
 
-        if not self.dont_ask_trash or ok:
-            self.trash_set = self.add_or_create_set("Trash")
-            self.sets.remove(self.trash_set)
+        if self.dont_ask_trash or ok:
+            index = self.initial_image_grid.currentRow()
+            trash_set = self.add_or_create_set("Trash")
+            self.initial_image_grid.setCurrentRow(index)
+            if not self.trash_set:
+                self.sets.remove(trash_set)
+            self.trash_set = trash_set
 
 
     def clicked_set(self, set):
@@ -141,10 +147,15 @@ class NeuralNetSection(QWidget):
         to_add = []
         exists = False
         setToAdd = None
+
         for set in self.sets:
             if set.name == name:
                 exists = True
                 setToAdd = set
+
+        if name == "Trash" and self.trash_set:
+            setToAdd = self.trash_set
+            exists = True
 
         for item in self.initial_image_grid.selectedItems():
             taken = self.initial_image_grid.takeItem(self.initial_image_grid.row(item))
@@ -166,7 +177,15 @@ class NeuralNetSection(QWidget):
             if len(text) == 0:
                 self.show_error("You must enter a set name")
             elif ok:
+                for set in self.sets:
+                    if set.name == text:
+                        ErrorDialog.dialog(self, "There is already a set with this name")
+                        index = self.initial_image_grid.currentRow() + 1
+                        self.initial_image_grid.setCurrentRow(index)
+                        return
+                index = self.initial_image_grid.currentRow()
                 self.add_or_create_set(text)
+                self.initial_image_grid.setCurrentRow(index)
 
 
     def show_error(self, message):
@@ -174,6 +193,9 @@ class NeuralNetSection(QWidget):
 
     def init_ui(self):
         self.overall_layout = QVBoxLayout()
+
+        self.main_splitter = QSplitter()
+        self.main_splitter.setOrientation(Qt.Vertical)
 
         self.top_widget = QWidget()
         self.top_layout = QHBoxLayout()
@@ -187,7 +209,7 @@ class NeuralNetSection(QWidget):
 
         self.top_widget.setLayout(self.top_layout)
 
-        self.initial_image_grid.populate_from_folder(base_dir + "digit_testing")
+        self.initial_image_grid.populate_from_folder(base_dir + "page-0400-cropped")
 
         self.top_grid_buttons = QVBoxLayout()
         self.top_grid_buttons.addWidget(self.add_button)
@@ -199,7 +221,9 @@ class NeuralNetSection(QWidget):
         self.top_layout.addWidget(self.initial_image_grid)
         self.top_layout.addLayout(self.top_grid_buttons)
 
-        self.overall_layout.addWidget(self.top_widget)
+        self.lower_layout = QVBoxLayout()
+        self.lower_widget = QWidget()
+        self.lower_widget.setLayout(self.lower_layout)
 
         self.buttons_layout = QHBoxLayout()
         self.expand_all_button = CustomPushButton("Hide All -")
@@ -221,7 +245,7 @@ class NeuralNetSection(QWidget):
         self.buttons_layout.addWidget(self.search_field)
         self.buttons_layout.addWidget(self.sort_button)
 
-        self.overall_layout.addLayout(self.buttons_layout)
+        self.lower_layout.addLayout(self.buttons_layout)
 
         self.main_layout = QVBoxLayout()
 
@@ -241,8 +265,14 @@ class NeuralNetSection(QWidget):
         self.main_widget.setContentsMargins(0, 0, 30, 0)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.overall_layout.addWidget(self.scroll, 1)
-        self.overall_layout.addStretch()
+        self.lower_layout.addWidget(self.scroll, 1)
+        self.lower_layout.addStretch()
+
+        self.main_splitter.setObjectName("horizontalSplitter")
+        self.main_splitter.addWidget(self.top_widget)
+        self.main_splitter.addWidget(self.lower_widget)
+
+        self.overall_layout.addWidget(self.main_splitter)
         self.setLayout(self.overall_layout)
 
 
