@@ -1,6 +1,7 @@
 import os
+import gzip
 
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QMainWindow, QSplitter
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QMainWindow, QSplitter, QAction, QFileDialog
 from PyQt5.QtCore import QThread
 import numpy as np
 
@@ -24,6 +25,7 @@ class MainWindowNew(QMainWindow):
         self.width = 960
         self.height = 560
         self.first_run = True
+        self.current_save = None
         self.init_ui()
 
     def update_progress(self, amount):
@@ -98,6 +100,72 @@ class MainWindowNew(QMainWindow):
 
         self.run_neural_net()
 
+    def open_sets(self):
+        fileName, filter = QFileDialog.getOpenFileName(self, 'Open sets save', base_dir + "Framework/saves",
+                                                       "Set Files (*.sets)")
+
+        if fileName:
+            print(fileName)
+            inF = gzip.open(fileName, 'rb')
+            s = inF.read()
+            inF.close()
+            lines = s.decode("utf-8").splitlines()
+            setName = ""
+            images = []
+            self.main_area.clear_sets()
+            for i, line in enumerate(lines):
+                if ("Set:" in line and (len(images) > 0)):
+                    self.main_area.create_new_set(setName, images)
+                    images = []
+
+                if "Set:" in line:
+                    setName = line.replace("Set: ", "", 1)
+                    print("SET NAME:", setName)
+                else:
+                    #Line is an image
+                    pixels = line.split(",")
+                    image = []
+                    for pixel in pixels:
+                        image.append(np.uint8(pixel))
+                    images.append(np.array(image))
+
+                if i == (len(lines) - 1):
+                    print("images is ", images)
+                    self.main_area.create_new_set(setName, images)
+
+    def save_sets_as(self):
+        self.current_save = None
+        self.save_sets()
+
+    def save_sets(self):
+
+        if self.current_save:
+            fileName = self.current_save
+        else:
+            fileName, filter = QFileDialog.getSaveFileName(self, 'Save sets', base_dir + "Framework/saves",
+                                               "Set Files (*.sets)")
+            self.current_save = fileName
+
+        if fileName:
+            sets = self.main_area.sets
+            f = gzip.open(fileName, "wb")
+            for set in sets:
+                images = set.all_images
+                f.write(bytes('Set: ' + set.name + '\n', encoding="utf-8"))
+                for image in images:
+                    print(image)
+                    for i, pixel in enumerate(image.imageData):
+                        extra = '' if i == (len(image.imageData) - 1) else ','
+                        f.write(bytes(str(pixel) + extra, encoding="utf-8"))
+                    f.write(bytes('\n', encoding="utf-8"))
+
+            f.close()
+            # os.remove(fileName)
+            # os.rename(fileName + ".gz", fileName)
+
+
+
+
     def added_to_set(self, set_name):
         self.datapanel.increment_training_table(set_name)
 
@@ -152,5 +220,28 @@ class MainWindowNew(QMainWindow):
         self.setCentralWidget(self.main_grid)
         self.main_grid.setStretchFactor(0, 5)
         self.main_grid.setStretchFactor(1, 7)
+
+        save_action = QAction("&Save", self)
+        save_action.setShortcut("Ctrl+S")
+        save_action.setStatusTip('Save the current sets')
+        save_action.triggered.connect(self.save_sets)
+
+        save_action_as = QAction("&Save As", self)
+        save_action_as.setStatusTip('New save for the current sets')
+        save_action_as.triggered.connect(self.save_sets_as)
+
+        open_action = QAction("&Open", self)
+        open_action.setShortcut("Ctrl+O")
+        open_action.setStatusTip('Open a sets save file')
+        open_action.triggered.connect(self.open_sets)
+
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu('&File')
+        file_menu.addAction(open_action)
+        file_menu.addAction(save_action)
+        file_menu.addAction(save_action_as)
+
+
+
 
         self.show()

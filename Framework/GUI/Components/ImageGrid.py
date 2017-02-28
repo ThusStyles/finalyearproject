@@ -41,7 +41,9 @@ class ImageGrid(QListWidget):
 
         item = CustomListWidgetItem(image)
         image = image.reshape(44, -1)
+        print("image is", image)
         image = ImageHelpers.toQImage(image)
+        print("image is", image)
         pixmap = QPixmap(img_size, img_size)
         pixmap.convertFromImage(image)
         icon = QIcon(pixmap)

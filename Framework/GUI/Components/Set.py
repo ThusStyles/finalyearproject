@@ -41,6 +41,12 @@ class Set(QWidget):
         for item in self.items:
             self.addItem(item)
 
+    def add_images(self, items):
+        self.items = []
+        for item in items:
+            added_item = self.add_image(item)
+            self.items.append(added_item)
+
     def delete_set(self):
         if not self.image_grid.isEmpty:
             ErrorDialog.dialog(self, "This set must be empty before it's deleted")

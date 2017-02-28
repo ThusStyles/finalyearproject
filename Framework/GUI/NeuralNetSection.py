@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollAr
 from PyQt5.QtGui import QStandardItem
 
 from Framework.GUI.Components import ImageGrid, CustomPushButton, CustomComboBox, Set, CustomDialog, ErrorDialog, InputDialog
+import numpy as np
 
 img_size = 44
 base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
@@ -63,7 +64,7 @@ class NeuralNetSection(QWidget):
 
     def clicked_set(self, set):
         othersSelected = False
-        trash_selected = len(self.trash_set.image_grid.selectedIndexes()) > 0
+        trash_selected = False if not self.trash_set else len(self.trash_set.image_grid.selectedIndexes()) > 0
         for otherSet in self.sets:
             if len(otherSet.image_grid.selectedIndexes()) > 0 or trash_selected:
                 othersSelected = True
@@ -124,8 +125,14 @@ class NeuralNetSection(QWidget):
         print("ITEMS ARE ", items)
         self.create_new_set(name, items)
 
+    def clear_sets(self):
+        for set in self.sets:
+            self.main_layout.removeWidget(set)
+            set.deleteLater()
+        self.sets = []
 
     def create_new_set(self, name, items):
+        if name == "": return
         new_set = Set(name)
         new_set.added_image.connect(self.added_to_set_event)
         new_set.removed_image.connect(self.removed_from_set_event)
@@ -133,7 +140,12 @@ class NeuralNetSection(QWidget):
         new_set.create_new_set.connect(self.create_new_set_with_selected)
         new_set.rename_set_sig.connect(self.rename_set)
         new_set.delete_set_sig.connect(self.delete_set)
-        new_set.add_items(items)
+
+        if len(items) > 0:
+            if isinstance(items[0], (np.ndarray, np.generic)):
+                new_set.add_images(items)
+            else:
+                new_set.add_items(items)
         self.sets.append(new_set)
         if self.empty_label:
             self.main_layout.removeWidget(self.empty_label)
