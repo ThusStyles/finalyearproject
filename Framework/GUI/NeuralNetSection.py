@@ -25,6 +25,7 @@ class NeuralNetSection(QWidget):
         self.expand_state = False
         self.dont_ask = False
         self.dont_ask_trash = False
+        self.initial_image_grid_visible = True
         self.current_index = 0
         self.selected_items = []
 
@@ -120,10 +121,26 @@ class NeuralNetSection(QWidget):
         selected = old_set.image_grid.selectedItems()
         items = []
         for sItem in selected:
-            item = old_set.takeItem(old_set.image_grid.row(sItem))
+            item = old_set.takeFromBoth(old_set.image_grid.row(sItem))
             items.append(item)
-        print("ITEMS ARE ", items)
         self.create_new_set(name, items)
+
+    def move_to_set(self, name, old_set):
+        if name == old_set.name: return
+        selected = old_set.image_grid.selectedItems()
+        setToAdd = None
+        for set in self.sets:
+            if set.name == name:
+                setToAdd = set
+                break
+        items = []
+        if not setToAdd:
+            ErrorDialog.dialog(self, "Cannot find a set with that name")
+            return
+        for sItem in selected:
+            item = old_set.takeFromBoth(old_set.image_grid.row(sItem))
+            items.append(item)
+        setToAdd.add_items(items)
 
     def clear_sets(self):
         for set in self.sets:
@@ -140,20 +157,36 @@ class NeuralNetSection(QWidget):
         new_set.create_new_set.connect(self.create_new_set_with_selected)
         new_set.rename_set_sig.connect(self.rename_set)
         new_set.delete_set_sig.connect(self.delete_set)
+        new_set.move_to_set.connect(self.move_to_set)
 
         if len(items) > 0:
             if isinstance(items[0], (np.ndarray, np.generic)):
                 new_set.add_images(items)
             else:
                 new_set.add_items(items)
-        self.sets.append(new_set)
+
         if self.empty_label:
             self.main_layout.removeWidget(self.empty_label)
             self.empty_label.deleteLater()
             self.empty_label = None
 
         self.main_layout.insertWidget(self.main_layout.count() - 1, new_set)
+
+        if name == "Trash":
+            self.trash_set = new_set
+        else:
+            self.sets.append(new_set)
         return new_set
+
+    def add_images_to_set(self, name, items):
+        for set in self.sets:
+            if set.name == name:
+                for item in items:
+                    set.add_image(item)
+                return
+        if name == "Trash" and self.trash_set:
+            for item in items:
+                self.trash_set.add_image(item)
 
     def add_or_create_set(self, name):
         to_add = []
@@ -221,7 +254,7 @@ class NeuralNetSection(QWidget):
 
         self.top_widget.setLayout(self.top_layout)
 
-        self.initial_image_grid.populate_from_folder(base_dir + "page-0400-cropped")
+        self.initial_image_grid.populate_from_folder(base_dir + "page-0400")
 
         self.top_grid_buttons = QVBoxLayout()
         self.top_grid_buttons.addWidget(self.add_button)

@@ -41,9 +41,7 @@ class ImageGrid(QListWidget):
 
         item = CustomListWidgetItem(image)
         image = image.reshape(44, -1)
-        print("image is", image)
         image = ImageHelpers.toQImage(image)
-        print("image is", image)
         pixmap = QPixmap(img_size, img_size)
         pixmap.convertFromImage(image)
         icon = QIcon(pixmap)
@@ -51,6 +49,15 @@ class ImageGrid(QListWidget):
         super().addItem(item)
         self.isEmpty = False
         return item
+
+    def delete_image(self, image):
+        count = self.count()
+        for i in range(count):
+            item = self.item(i)
+            if item == None: continue
+            if np.array_equal(item.imageData, image):
+                deleted = self.takeItem(i)
+                print("DELETING ", item)
 
 
     def populate_from_folder(self, folder_name):

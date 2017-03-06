@@ -45,7 +45,6 @@ class Datatable(QTableWidget):
             if set == name.text():
                 item = QTableWidgetItem()
                 new_count = 1 if increment else -1
-                print(set, "New count", new_count)
                 item.setData(Qt.EditRole, int(self.item(row, 1).text()) + new_count)
                 self.setItem(row, 1, item)
                 self.sortItems(1, Qt.DescendingOrder)

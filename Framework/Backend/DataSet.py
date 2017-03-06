@@ -3,10 +3,11 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 
+
 class DataSet:
 
     training_limit = 100
-    testing_limit = 100
+    testing_limit = 200
     all_images = []
     training_images = []
     testing_images = []
@@ -31,10 +32,8 @@ class DataSet:
 
 
     def get_label_index(self, name):
-        print("checking ", name)
         self.labels.append(name)
         self.labels = sorted(set(self.labels), key=lambda x: self.labels.index(x))
-        print("NEW LABELS", self.labels)
         for i, label in enumerate(self.labels):
             if str(label) == str(name):
                 return i
@@ -47,7 +46,6 @@ class DataSet:
         self.training_labels = []
 
         self.one_hot_size = numberOfSets
-        print(self.one_hot_size)
 
         for i, image in enumerate(images):
             one_hot = [0 for x in range(self.one_hot_size)]
@@ -56,7 +54,6 @@ class DataSet:
             self.training_images.append(image)
             self.training_labels.append(one_hot)
 
-        print("ONE HOT SIZE", self.one_hot_size)
 
         self.training_labels = np.array(self.training_labels)
         self.training_images = np.array(self.training_images)
@@ -66,23 +63,23 @@ class DataSet:
         self.epochs_completed = 0
         self.training_limit = len(self.training_images)
 
-        print(self.labels)
-        print(self.training_cls)
-        print(self.training_labels)
-
     def set_testing_data(self, images):
         self.all_testing_images = images
-        self.current_testing_max = 0
         self.new_testing_data()
-        print(self.testing_images)
+
+    def add_to_testing_data(self, image):
+        self.all_testing_images.append(image)
 
     def new_testing_data(self):
         self.testing_images = []
-        old_limit = self.current_testing_max
-        self.current_testing_max = min(len(self.all_testing_images), (self.current_testing_max + self.testing_limit))
+        self.current_testing_max = min(len(self.all_testing_images), self.testing_limit)
 
-        for x in self.all_testing_images[old_limit:self.current_testing_max]:
+        for x in self.all_testing_images[0:self.current_testing_max]:
             self.testing_images.append(x)
+
+        print("SIZE OF TESITNG IMAGES BEFORE", len(self.all_testing_images))
+        self.all_testing_images = self.all_testing_images[self.current_testing_max:]
+        print("SIZE OF TESITNG IMAGES AFTER", len(self.all_testing_images))
 
         self.testing_images = np.array(self.testing_images)
         np.random.shuffle(self.testing_images)

@@ -33,30 +33,22 @@ class ImageHelpers:
             thumb.save(F_OUT)
 
     @staticmethod
-    def resize_images(size):
+    def resize_image(image, size):
         # Empty results
-        for x in range(10):
-            dir = base_dir + str(x)
-            os.chdir(dir)
-            filelist = [f for f in os.listdir(dir) if f.endswith(".tif")]
+        image = Image.open(image)
+        image = image.convert('L')
+        image = ImageOps.invert(image)
+        image = ImageOps.grayscale(image)
+        image.thumbnail(size, Image.ANTIALIAS)
+        image_size = image.size
 
-            for f in filelist:
-                image = Image.open(dir + "/" + f)
-                image = image.convert('L')
-                image = ImageOps.invert(image)
-                image = ImageOps.grayscale(image)
-                image.thumbnail(size, Image.ANTIALIAS)
-                image_size = image.size
+        thumb = image.crop((0, 0, size[0], size[1]))
 
-                thumb = image.crop((0, 0, size[0], size[1]))
+        offset_x = max((size[0] - image_size[0]) // 2, 0)
+        offset_y = max((size[1] - image_size[1]) // 2, 0)
 
-                offset_x = max((size[0] - image_size[0]) // 2, 0)
-                offset_y = max((size[1] - image_size[1]) // 2, 0)
-
-                thumb = ImageChops.offset(thumb, offset_x, offset_y)
-                F_OUT = dir + "-cropped/" + f
-
-                thumb.save(F_OUT)
+        thumb = ImageChops.offset(thumb, offset_x, offset_y)
+        return thumb
 
     @staticmethod
     def toQImage(im, copy=False):

@@ -10,7 +10,7 @@ from Framework.GUI.Panels.DataInfoPanel import DataInfoPanel
 from Framework.GUI.Panels.MenuPanel import MenuPanel
 from Framework.GUI.Panels.ToolbarPanel import ToolbarPanel
 from Framework.Backend import DataSet
-from Framework.GUI.ThreadOps import RunNeuralNet
+from Framework.GUI.ThreadOps import RunNeuralNet, SaveLoad, PopulateImageGrid
 
 img_size = 44
 base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
@@ -28,19 +28,17 @@ class MainWindowNew(QMainWindow):
         self.current_save = None
         self.init_ui()
 
-    def update_progress(self, amount):
-        self.left_area.progressModule.progress.setText("Running - " + str(amount) + "%")
+    def update_progress(self, amount=0, status="Running"):
+        self.left_area.progressModule.progress.setText(status + " - " + str(amount) + "%")
         self.left_area.progressModule.progress.setValue(amount)
 
     def testing_finished(self, cls_pred):
-        print("CLS PRED", cls_pred)
 
         for i, prob_array in enumerate(cls_pred):
             image = self.dataset.testing_images[i]
             pred_index = np.argmax(prob_array)
             prob = prob_array[pred_index]
             labelForDigit = self.dataset.labels[pred_index]
-            print("LABEL IS ", labelForDigit)
             for set in self.main_area.sets:
                 if set.name == labelForDigit:
                     item = set.add_image(image)
@@ -62,6 +60,21 @@ class MainWindowNew(QMainWindow):
 
         self.thread.start()
 
+    def add_toolbar_clicked(self):
+        folder_name = QFileDialog.getExistingDirectory(self, "Select Directory With Testing Images")
+
+        if folder_name:
+            self.obj = PopulateImageGrid(folder_name)  # no parent!
+            self.thread = QThread()  # no parent!
+
+            self.obj.moveToThread(self.thread)
+            self.obj.one_iteration.connect(self.update_progress)
+            self.obj.added_image.connect(self.dataset.add_to_testing_data)
+            self.obj.finished.connect(self.dataset.new_testing_data)
+            self.thread.started.connect(self.obj.long_running)
+
+            self.thread.start()
+
     def run_clicked(self):
         sets = self.main_area.sets
 
@@ -78,7 +91,6 @@ class MainWindowNew(QMainWindow):
             for index in range(itemCount):
                 item = set.all_images[index]
                 if item == None: continue
-                print(item)
                 itemNames.append(set.name)
                 itemData.append(item.imageData)
             set.clear()
@@ -86,15 +98,16 @@ class MainWindowNew(QMainWindow):
         self.dataset.add_sets_to_training_data(setCount, itemNames, itemData)
 
         if self.first_run:
-            all_image_count = self.main_area.initial_image_grid.count()
-            testing_images = []
-            for index in range(all_image_count):
-                item = self.main_area.initial_image_grid.item(index)
-                if item == None: continue
-                testing_images.append(item.imageData)
+            # all_image_count = self.main_area.initial_image_grid.count()
+            # testing_images = []
+            # for index in range(all_image_count):
+            #     item = self.main_area.initial_image_grid.item(index)
+            #     if item == None: continue
+            #     testing_images.append(item.imageData)
             self.main_area.initial_image_grid.clear()
             self.main_area.top_widget.setVisible(False)
-            self.dataset.set_testing_data(testing_images)
+            self.main_area.initial_image_grid_visible = False
+            # self.dataset.set_testing_data(testing_images)
 
         self.first_run = False
 
@@ -105,33 +118,22 @@ class MainWindowNew(QMainWindow):
                                                        "Set Files (*.sets)")
 
         if fileName:
-            print(fileName)
-            inF = gzip.open(fileName, 'rb')
-            s = inF.read()
-            inF.close()
-            lines = s.decode("utf-8").splitlines()
-            setName = ""
-            images = []
+            self.current_save = fileName
             self.main_area.clear_sets()
-            for i, line in enumerate(lines):
-                if ("Set:" in line and (len(images) > 0)):
-                    self.main_area.create_new_set(setName, images)
-                    images = []
+            self.left_area.progressModule.progress.setDefault()
+            self.obj = SaveLoad(self.current_save)  # no parent!
+            self.thread = QThread()  # no parent!
 
-                if "Set:" in line:
-                    setName = line.replace("Set: ", "", 1)
-                    print("SET NAME:", setName)
-                else:
-                    #Line is an image
-                    pixels = line.split(",")
-                    image = []
-                    for pixel in pixels:
-                        image.append(np.uint8(pixel))
-                    images.append(np.array(image))
+            self.obj.moveToThread(self.thread)
+            self.obj.one_iteration.connect(self.update_progress)
+            self.obj.create_set.connect(self.main_area.create_new_set)
+            self.obj.add_to_training_set.connect(self.main_area.add_images_to_set)
+            self.obj.add_to_testing_set.connect(self.dataset.add_to_testing_data)
+            self.obj.finished.connect(self.dataset.new_testing_data)
+            self.thread.started.connect(self.obj.load_images)
 
-                if i == (len(lines) - 1):
-                    print("images is ", images)
-                    self.main_area.create_new_set(setName, images)
+            self.thread.start()
+
 
     def save_sets_as(self):
         self.current_save = None
@@ -144,22 +146,21 @@ class MainWindowNew(QMainWindow):
         else:
             fileName, filter = QFileDialog.getSaveFileName(self, 'Save sets', base_dir + "Framework/saves",
                                                "Set Files (*.sets)")
-            self.current_save = fileName
 
         if fileName:
-            sets = self.main_area.sets
-            f = gzip.open(fileName, "wb")
-            for set in sets:
-                images = set.all_images
-                f.write(bytes('Set: ' + set.name + '\n', encoding="utf-8"))
-                for image in images:
-                    print(image)
-                    for i, pixel in enumerate(image.imageData):
-                        extra = '' if i == (len(image.imageData) - 1) else ','
-                        f.write(bytes(str(pixel) + extra, encoding="utf-8"))
-                    f.write(bytes('\n', encoding="utf-8"))
+            sets = self.main_area.sets[:]
+            if self.main_area.trash_set:
+                sets.append(self.main_area.trash_set)
+            self.current_save = fileName
+            self.left_area.progressModule.progress.setDefault()
+            self.obj = SaveLoad(self.current_save, sets, self.dataset.all_testing_images)  # no parent!
+            self.thread = QThread()  # no parent!
 
-            f.close()
+            self.obj.moveToThread(self.thread)
+            self.obj.one_iteration.connect(self.update_progress)
+            self.thread.started.connect(self.obj.save_images)
+
+            self.thread.start()
             # os.remove(fileName)
             # os.rename(fileName + ".gz", fileName)
 
@@ -209,6 +210,7 @@ class MainWindowNew(QMainWindow):
 
         self.toolbar = ToolbarPanel()
         self.toolbar.run_clicked.connect(self.run_clicked)
+        self.toolbar.add_clicked.connect(self.add_toolbar_clicked)
         self.right_layout.addWidget(self.toolbar)
         self.right_layout.addLayout(self.right_grid)
 

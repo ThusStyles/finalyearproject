@@ -21,11 +21,10 @@ class RunNeuralNet(QObject):
     def long_running(self):
         self.neuralNet = NeuralNet(self.img_size, self.dataset, self.num_classes)
         self.created_neural_net.emit(self.neuralNet)
-        self.neuralNet.optimize(num_iterations=100, callback=self.finished_one_iteration)
+        self.neuralNet.optimize(num_iterations=1000, callback=self.finished_one_iteration)
         self.neuralNet.get_test_accuracy(show_example_errors=False, callback=self.finished_test_accuracy)
 
     def finished_test_accuracy(self, cls_pred):
-        print(cls_pred)
         self.testing_finished.emit(cls_pred)
         self.finished.emit()
 
