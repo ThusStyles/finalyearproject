@@ -28,7 +28,7 @@ class Datatable(QTableWidget):
         header.setDefaultAlignment(Qt.AlignLeft)
         self.setShowGrid(False)
 
-    def addRow(self, title, items):
+    def add_row(self, title, items):
         rowPosition = self.rowCount()
         self.insertRow(rowPosition)
         self.setItem(rowPosition, 0, QTableWidgetItem(title))
@@ -37,6 +37,14 @@ class Datatable(QTableWidget):
         self.setItem(rowPosition, 1, item)
         self.setRowCount(rowPosition + 1)
         self.added.emit()
+
+    def delete_row(self, set):
+        allRows = self.rowCount()
+        for row in range(0, allRows):
+            name = self.item(row, 0)
+            if set == name.text():
+                self.removeRow(row)
+                return
 
     def change_set(self, set, increment):
         allRows = self.rowCount()
@@ -49,7 +57,7 @@ class Datatable(QTableWidget):
                 self.setItem(row, 1, item)
                 self.sortItems(1, Qt.DescendingOrder)
                 return
-        self.addRow(set, 1)
+        self.add_row(set, 1)
         self.sortItems(1, Qt.DescendingOrder)
 
     def increment_set(self, set):
@@ -83,6 +91,9 @@ class DataInfoPanel(QWidget):
             self.testingViewAll.setVisible(True)
         else:
             self.testingViewAll.setVisible(False)
+
+    def delete_training_row(self, set):
+        self.trainingTable.delete_row(set)
 
     def increment_training_table(self, set):
         self.trainingTable.increment_set(set)

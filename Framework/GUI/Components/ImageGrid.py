@@ -60,12 +60,14 @@ class ImageGrid(QListWidget):
                 print("DELETING ", item)
 
 
-    def populate_from_folder(self, folder_name):
+    def populate_from_folder(self, folder_name, one_iteration=None):
         self.obj = PopulateImageGrid(folder_name)  # no parent!
         self.thread = QThread()
 
         self.obj.moveToThread(self.thread)
         self.obj.added.connect(self.add_image_from_thread)
+        if one_iteration:
+            self.obj.one_iteration.connect(one_iteration)
         self.thread.started.connect(self.obj.long_running)
 
         self.thread.start()

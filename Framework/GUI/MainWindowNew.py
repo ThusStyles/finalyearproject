@@ -64,16 +64,9 @@ class MainWindowNew(QMainWindow):
         folder_name = QFileDialog.getExistingDirectory(self, "Select Directory With Testing Images")
 
         if folder_name:
-            self.obj = PopulateImageGrid(folder_name)  # no parent!
-            self.thread = QThread()  # no parent!
+            self.main_area.top_widget.setVisible(True)
+            self.main_area.initial_image_grid.populate_from_folder(folder_name, self.update_progress)
 
-            self.obj.moveToThread(self.thread)
-            self.obj.one_iteration.connect(self.update_progress)
-            self.obj.added_image.connect(self.dataset.add_to_testing_data)
-            self.obj.finished.connect(self.dataset.new_testing_data)
-            self.thread.started.connect(self.obj.long_running)
-
-            self.thread.start()
 
     def run_clicked(self):
         sets = self.main_area.sets
@@ -165,7 +158,8 @@ class MainWindowNew(QMainWindow):
             # os.rename(fileName + ".gz", fileName)
 
 
-
+    def deleted_set(self, set_name):
+        self.datapanel.delete_training_row(set_name)
 
     def added_to_set(self, set_name):
         self.datapanel.increment_training_table(set_name)
@@ -207,6 +201,7 @@ class MainWindowNew(QMainWindow):
         self.main_area = NeuralNetSection()
         self.main_area.added_to_set.connect(self.added_to_set)
         self.main_area.removed_from_set.connect(self.removed_from_set)
+        self.main_area.deleted_set.connect(self.deleted_set)
 
         self.toolbar = ToolbarPanel()
         self.toolbar.run_clicked.connect(self.run_clicked)

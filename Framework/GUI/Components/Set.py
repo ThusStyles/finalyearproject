@@ -23,6 +23,9 @@ class Set(QWidget):
         self.sets = []
         self.all_images = []
 
+    def count(self):
+        return self.image_grid.count()
+
     def expand(self):
         self.image_grid.setVisible(True)
         self.hidden = False
@@ -62,13 +65,16 @@ class Set(QWidget):
             self.rename_set_sig.emit(self, text)
 
     def move_selected(self):
-        print("Move to set with selected triggered")
         if len(self.image_grid.selectedIndexes()) == 0: return
         text, ok = InputDialog.dialog(self, 'Enter the name of the set to move to:', "Set name...")
         if len(text) == 0:
             return self.show_error("You must enter a set name")
         elif ok:
             self.move_to_set.emit(text, self)
+
+    def move_selected_trash(self):
+        if len(self.image_grid.selectedIndexes()) == 0: return
+        self.move_to_set.emit("Trash", self)
 
     def new_set_with_selected(self):
         print("New set with selected triggered")
@@ -135,6 +141,7 @@ class Set(QWidget):
             if self.create_new_set_linked:
                 self.popMenu.removeAction(self.new_set_action)
                 self.popMenu.removeAction(self.move_selected_action)
+                self.popMenu.removeAction(self.move_selected_trash_action)
                 self.create_new_set_linked = False
         else:
             self.item_selected_label.setText("(" + str(count) + " selected)")
@@ -142,6 +149,7 @@ class Set(QWidget):
             if not self.create_new_set_linked:
                 self.popMenu.addAction(self.new_set_action)
                 self.popMenu.addAction(self.move_selected_action)
+                self.popMenu.addAction(self.move_selected_trash_action)
                 self.create_new_set_linked = True
 
     def init_ui(self):
@@ -190,6 +198,8 @@ class Set(QWidget):
         self.new_set_action.triggered.connect(self.new_set_with_selected)
         self.move_selected_action = QAction("Move selected to set", self)
         self.move_selected_action.triggered.connect(self.move_selected)
+        self.move_selected_trash_action = QAction("Move selected to trash set", self)
+        self.move_selected_trash_action.triggered.connect(self.move_selected_trash)
         hide_action.triggered.connect(self.toggle_visibility)
         self.popMenu.addAction(hide_action)
         self.popMenu.addAction(rename_action)

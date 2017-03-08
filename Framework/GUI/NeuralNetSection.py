@@ -1,5 +1,4 @@
 import os
-
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QAbstractItemView, QInputDialog, \
     QMessageBox, QLineEdit, QComboBox, QSplitter
@@ -11,11 +10,11 @@ import numpy as np
 img_size = 44
 base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
 
-
 class NeuralNetSection(QWidget):
 
     added_to_set = pyqtSignal(str)
     removed_from_set = pyqtSignal(str)
+    deleted_set = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -86,9 +85,10 @@ class NeuralNetSection(QWidget):
                     item = oneSet.takeFromBoth(oneSet.image_grid.row(selectedItem))
                     set.addItem(item)
 
-            for selectedItem in self.trash_set.image_grid.selectedItems():
-                item = self.trash_set.takeFromBoth(self.trash_set.image_grid.row(selectedItem))
-                set.addItem(item)
+            if self.trash_set:
+                for selectedItem in self.trash_set.image_grid.selectedItems():
+                    item = self.trash_set.takeFromBoth(self.trash_set.image_grid.row(selectedItem))
+                    set.addItem(item)
 
         set.hidden = True
 
@@ -110,11 +110,11 @@ class NeuralNetSection(QWidget):
         set.set_name(new_name)
 
     def delete_set(self, to_delete):
-        for set in self.sets:
-            if set == to_delete:
-                self.main_layout.removeWidget(to_delete)
-                self.sets.remove(to_delete)
-                to_delete.deleteLater()
+        self.deleted_set.emit(to_delete.name)
+        self.main_layout.removeWidget(to_delete)
+        if not to_delete == self.trash_set:
+            self.sets.remove(to_delete)
+        to_delete.deleteLater()
 
     def create_new_set_with_selected(self, name, old_set):
         if self.is_existing_set(name): return
@@ -133,6 +133,10 @@ class NeuralNetSection(QWidget):
             if set.name == name:
                 setToAdd = set
                 break
+        if name == "Trash":
+            if not self.trash_set:
+                self.trash_set = self.create_new_set("Trash", [])
+            setToAdd = self.trash_set
         items = []
         if not setToAdd:
             ErrorDialog.dialog(self, "Cannot find a set with that name")
@@ -176,6 +180,7 @@ class NeuralNetSection(QWidget):
             self.trash_set = new_set
         else:
             self.sets.append(new_set)
+        self.search_and_sort()
         return new_set
 
     def add_images_to_set(self, name, items):
@@ -236,6 +241,42 @@ class NeuralNetSection(QWidget):
     def show_error(self, message):
         ErrorDialog.dialog(self, message)
 
+    def search(self, query):
+        titles = []
+        matching = []
+
+        for set in self.sets:
+            titles.append(set.name)
+            set.setVisible(False)
+
+        for i, title in enumerate(titles):
+            if query in title:
+                matching.append(i)
+
+        for match in matching:
+            self.sets[match].setVisible(True)
+
+    def sort_sets(self, sort_by):
+        new_sets = []
+        if sort_by == 0:
+            self.sets.sort(key=lambda x: x.name, reverse=False)
+        elif sort_by == 1:
+            self.sets.sort(key=lambda x: x.name, reverse=True)
+        elif sort_by == 2:
+            self.sets.sort(key=lambda x: x.count(), reverse=False)
+        elif sort_by == 3:
+            self.sets.sort(key=lambda x: x.count(), reverse=True)
+
+        for set in self.sets:
+            self.main_layout.removeWidget(set)
+
+        for set in self.sets:
+            self.main_layout.insertWidget(self.main_layout.count() - 1, set)
+
+    def search_and_sort(self):
+        self.sort_sets(self.sort_button.currentIndex())
+        self.search(self.search_field.text())
+
     def init_ui(self):
         self.overall_layout = QVBoxLayout()
 
@@ -254,7 +295,7 @@ class NeuralNetSection(QWidget):
 
         self.top_widget.setLayout(self.top_layout)
 
-        self.initial_image_grid.populate_from_folder(base_dir + "page-0400")
+        self.top_widget.setVisible(False)
 
         self.top_grid_buttons = QVBoxLayout()
         self.top_grid_buttons.addWidget(self.add_button)
@@ -279,6 +320,7 @@ class NeuralNetSection(QWidget):
         self.search_field.setAttribute(Qt.WA_MacShowFocusRect, False)
         self.search_field.setObjectName("searchField")
         self.search_field.setPlaceholderText("Search for sets...")
+        self.search_field.textChanged.connect(self.search_and_sort)
         self.sort_button = CustomComboBox()
 
         self.sort_button.addItem("Name (Ascending)")
@@ -286,6 +328,7 @@ class NeuralNetSection(QWidget):
         self.sort_button.addItem("Item count (Ascending)")
         self.sort_button.addItem("Item count (Descending)")
         self.sort_button.setEditable(False)
+        self.sort_button.activated.connect(self.search_and_sort)
         self.buttons_layout.addWidget(self.expand_all_button)
         self.buttons_layout.addWidget(self.search_field)
         self.buttons_layout.addWidget(self.sort_button)
