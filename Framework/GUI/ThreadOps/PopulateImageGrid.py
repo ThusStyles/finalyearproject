@@ -1,11 +1,11 @@
 import os
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import (QPixmap, QIcon, QImage, qRgb)
-from skimage import io
-from Framework.GUI.Helpers import ImageHelpers
 import numpy as np
+from PyQt5.QtCore import *
+from PyQt5.QtGui import (QImage)
+
 from Framework.GUI.Components import CustomListWidgetItem
+from Framework.GUI.Helpers import ImageHelpers
 
 class PopulateImageGrid(QObject):
 
@@ -20,7 +20,8 @@ class PopulateImageGrid(QObject):
 
     @pyqtSlot()
     def long_running(self):
-        filelist = [f for f in os.listdir(self.folder_name) if f.endswith(".tif")]
+        valid_images = (".jpg", ".jpeg", ".gif", ".png", ".tga", ".tif")
+        filelist = [f for f in os.listdir(self.folder_name) if f.endswith(valid_images)]
         filelist_len = len(filelist)
         for i, file in enumerate(filelist):
             image = ImageHelpers.resize_image(os.path.join(self.folder_name, file), (44, 44))
@@ -30,5 +31,5 @@ class PopulateImageGrid(QObject):
             image = image.reshape(44, -1)
             image = ImageHelpers.toQImage(image)
             self.added.emit(item, image)
-            self.one_iteration.emit(int((i / (filelist_len - 1)) * 100), "Adding to test set")
+            self.one_iteration.emit(int((i / (filelist_len - 1)) * 100), "Loading images")
         self.finished.emit()

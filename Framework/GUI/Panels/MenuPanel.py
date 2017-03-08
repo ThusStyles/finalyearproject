@@ -11,7 +11,6 @@ base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
 gray_color_table = [qRgb(i, i, i) for i in range(256)]
 
 
-
 class ProgressModule(QWidget):
     def __init__(self):
         super().__init__()
@@ -44,6 +43,7 @@ class ProgressModule(QWidget):
     def setProgress(self, prog):
         self.progress.setValue(prog)
 
+
 class MenuModule(QListWidget):
     def __init__(self):
         super().__init__()
@@ -61,7 +61,10 @@ class MenuModule(QListWidget):
 
         self.show()
 
+
 class MenuPanel(QWidget):
+
+    selectedItem = pyqtSignal(int)
 
     def __init__(self):
         super().__init__()
@@ -73,6 +76,8 @@ class MenuPanel(QWidget):
         painter = QPainter(self)
         self.style().drawPrimitive(QStyle.PE_Widget, opt, painter, self)
 
+    def selected_item(self, item):
+        self.selectedItem.emit(self.menu.currentIndex().row())
 
     def init_ui(self):
         self.layout = QVBoxLayout()
@@ -82,6 +87,7 @@ class MenuPanel(QWidget):
         self.progressModule = ProgressModule()
         self.layout.addWidget(self.progressModule)
         self.menu = MenuModule()
+        self.menu.selectionModel().selectionChanged.connect(self.selected_item)
         font = QFont()
         font.setLetterSpacing(QFont.AbsoluteSpacing, 2)
         font.setPixelSize(11.5)

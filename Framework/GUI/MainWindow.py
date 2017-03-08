@@ -1,197 +1,21 @@
-import sys
 import os
-from PyQt5.QtWidgets import QListWidgetItem, QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, QDialog, QVBoxLayout, QGridLayout, QProgressBar, QMainWindow, QLineEdit, QLabel, QListWidget, QListView, QScrollArea, QAbstractItemView
-from PyQt5.QtGui import (QPixmap, QIcon, QImage, qRgb)
-from PyQt5.QtCore import *
-from PyQt5.QtCore import pyqtSlot, pyqtSignal
-from Framework.DataSet import DataSet
-from Framework.NeuralNet import NeuralNet
+
 import numpy as np
+from PyQt5.QtCore import QThread, QSettings
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QMainWindow, QSplitter, QAction, QFileDialog
+
+from Framework.Backend import DataSet
+from Framework.GUI.Panels.DataInfoPanel import DataInfoPanel
+from Framework.GUI.Panels.MenuPanel import MenuPanel
+from Framework.GUI.Panels.ToolbarPanel import ToolbarPanel
+from Framework.GUI.Sections import NeuralNetSection, SettingsSection
+from Framework.GUI.ThreadOps import RunNeuralNet, SaveLoad
 
 img_size = 44
 base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
-gray_color_table = [qRgb(i, i, i) for i in range(256)]
 
 
-class PopulateCarpet(QObject):
-
-    added = pyqtSignal(QImage)
-    finished = pyqtSignal()
-
-    def __init__(self, images):
-        super().__init__()
-        self.addItem(QListWidgetItem("Empty"))
-        self.images = images
-
-    @pyqtSlot()
-    def long_running(self):
-        for file in self.images:
-            image = QImage(file)
-            self.added.emit(image)
-        self.finished.emit()
-
-
-class LoadImages(QObject):
-
-    finished = pyqtSignal()
-    one_iteration = pyqtSignal(float)
-
-    def __init__(self, training_limit, testing_limit, dataset):
-        super().__init__()
-        self.training_limit = training_limit
-        self.testing_limit = testing_limit
-        self.dataset = dataset
-
-    @pyqtSlot()
-    def long_running(self):
-        self.dataset.testing_limit = self.testing_limit
-        self.dataset.get_data(callback=self.finished_one_iteration)
-        self.dataset.set_training_limit(self.training_limit)
-        self.finished.emit()
-
-    def finished_one_iteration(self, amount):
-        self.one_iteration.emit(int(amount * 100))
-
-class RunNeuralNet(QObject):
-
-    finished = pyqtSignal()
-    one_iteration = pyqtSignal(float)
-    testing_finished = pyqtSignal(float, np.ndarray)
-    created_neural_net = pyqtSignal(object)
-
-    def __init__(self, dataset):
-        super().__init__()
-        self.dataset = dataset
-
-    @pyqtSlot()
-    def long_running(self):
-        self.neuralNet = NeuralNet(img_size, self.dataset)
-        self.created_neural_net.emit(self.neuralNet)
-        self.neuralNet.optimize(num_iterations=100, callback=self.finished_one_iteration)
-        self.neuralNet.get_test_accuracy(show_example_errors=False, callback=self.finished_test_accuracy)
-
-    def finished_test_accuracy(self, test_acc, cls_pred):
-        print(test_acc)
-        print(cls_pred)
-        self.testing_finished.emit(test_acc, cls_pred)
-        self.finished.emit()
-
-
-    def finished_one_iteration(self, amount):
-        self.one_iteration.emit(int(amount * 100))
-
-class CustomListWidgetItem(QListWidgetItem):
-    def __init__(self, parentIndex, imageData):
-        super().__init__()
-        self.parentIndex = parentIndex
-        self.imageData = imageData
-
-class ImageGrid(QListWidget):
-    def __init__(self, label):
-        super().__init__()
-        self.isEmpty = True
-        self.label = label
-        self.init_ui()
-
-    def toQImage(self, im, copy=False):
-        if im is None:
-            return QImage()
-
-        if im.dtype == np.uint8:
-            if len(im.shape) == 2:
-                qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_Indexed8)
-                qim.setColorTable(gray_color_table)
-                return qim.copy() if copy else qim
-
-            elif len(im.shape) == 3:
-                if im.shape[2] == 3:
-                    qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_RGB888);
-                    return qim.copy() if copy else qim
-                elif im.shape[2] == 4:
-                    qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_ARGB32);
-                    return qim.copy() if copy else qim
-
-    @pyqtSlot(QImage)
-    def add_image(self, image, index):
-        if self.isEmpty:
-            super().clear()
-            self.setGridSize(QSize(30, 30))
-        item = CustomListWidgetItem(index, image)
-        image = image.reshape(44, -1)
-        image = self.toQImage(image)
-        pixmap = QPixmap(img_size, img_size)
-        pixmap.convertFromImage(image)
-        icon = QIcon(pixmap)
-        item.setIcon(icon)
-        super().addItem(item)
-        self.isEmpty = False
-
-    def clear(self):
-        self.setGridSize(QSize(30, 30))
-        self.isEmpty = True
-        super().clear()
-        super().addItem(QListWidgetItem("Empty"))
-
-    def takeItem(self, p_int):
-        if self.count() == 1:
-            self.isEmpty = True
-            self.setGridSize(QSize(img_size, img_size))
-            super().addItem(QListWidgetItem("Empty"))
-        return super().takeItem(p_int)
-
-    def addItem(self, item):
-        if self.isEmpty:
-            super().clear()
-            self.setGridSize(QSize(30, 30))
-        self.isEmpty = False
-        super().addItem(item)
-
-    def init_ui(self):
-        super().addItem(QListWidgetItem("Empty"))
-        self.setFlow(QListView.LeftToRight)
-        self.setResizeMode(QListView.Adjust)
-        self.setGridSize(QSize(60, 60))
-        self.setViewMode(QListView.IconMode)
-        self.setDragEnabled(False)
-
-    def add_files(self, file_list):
-        # 1 - create Worker and Thread inside the Form
-        self.isEmpty = False
-        super().clear()
-        self.setGridSize(QSize(img_size, img_size))
-        self.obj = PopulateCarpet(file_list)  # no parent!
-        self.thread = QThread()  # no parent!
-
-        self.obj.added.connect(self.add_image)
-        self.obj.moveToThread(self.thread)
-        self.obj.finished.connect(self.thread.quit)
-        self.thread.started.connect(self.obj.long_running)
-
-        self.thread.start()
-
-
-class MyProgressBar(QProgressBar):
-
-    def __init__(self):
-        super().__init__()
-        self.setAlignment(Qt.AlignCenter)
-        self._text = None
-
-    def setText(self, text):
-        self._text = text
-
-    def text(self):
-        return self._text
-
-    def setBusy(self):
-        self.setRange(0, 0)
-
-    def setDefault(self):
-        self.setRange(0, 100)
-
-
-
-class MainWindow(QDialog):
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.title = 'Convolutional Neural Network'
@@ -199,209 +23,238 @@ class MainWindow(QDialog):
         self.top = 300
         self.width = 960
         self.height = 560
-        self.initUI()
+        self.first_run = True
+        self.current_save = None
+        self.init_ui()
 
-    def initUI(self):
-        self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
+    def update_progress(self, amount=0, status="Running"):
+        self.left_area.progressModule.progress.setText(status + " - " + str(amount) + "%")
+        self.left_area.progressModule.progress.setValue(amount)
 
-        self.outerArea = QVBoxLayout()
+    def testing_finished(self, cls_pred):
 
-        self.grid = QGridLayout()
-        self.grid.setColumnStretch(0, 1)
-        self.grid.setColumnStretch(1, 3)
-        self.grid.setColumnStretch(2, 1)
-
-        #LEFT AREA
-        self.leftArea = QVBoxLayout()
-
-
-        # LEFT AREA - LABELS
-        self.trainingAmountLayout = QHBoxLayout()
-        self.trainingAmountLabel = QLabel()
-        self.trainingAmountLabel.setText("Training amount")
-        self.trainingAmount = QLineEdit(self)
-        self.trainingAmount.setText("100")
-        self.trainingAmountLayout.addWidget(self.trainingAmountLabel)
-        self.trainingAmountLayout.addWidget(self.trainingAmount)
-
-        self.testingAmountLayout = QHBoxLayout()
-        self.testingAmountLabel = QLabel()
-        self.testingAmountLabel.setText("Testing amount")
-        self.testingAmount = QLineEdit(self)
-        self.testingAmount.setText("100")
-        self.testingAmountLayout.addWidget(self.testingAmountLabel)
-        self.testingAmountLayout.addWidget(self.testingAmount)
-
-        # LEFT AREA - BUTTON AREA
-
-        self.buttonsLayout = QHBoxLayout()
-
-        self.load_button = QPushButton('Load Images', self)
-        self.load_button.setToolTip('Loads the requested number of images')
-        self.load_button.clicked.connect(self.load_clicked)
-
-        self.run_button = QPushButton('Run', self)
-        self.run_button.setToolTip('Starts the running of the neural network')
-        self.run_button.clicked.connect(self.run_clicked)
-        self.run_button.setDisabled(True)
-
-        self.buttonsLayout.addWidget(self.load_button)
-        self.buttonsLayout.addWidget(self.run_button)
-
-        self.leftArea.addLayout(self.trainingAmountLayout)
-        self.leftArea.addLayout(self.testingAmountLayout)
-        self.leftArea.addLayout(self.buttonsLayout)
-
-        self.accuracyLabel = QLabel()
-        self.leftArea.addWidget(self.accuracyLabel)
-        self.leftArea.addStretch()
-
-        self.grid.addLayout(self.leftArea, 0, 0)
-
-        self.middleArea = QVBoxLayout()
-        self.imageAreas = []
-
-        for i in range(10):
-            item = ImageGrid(str(i))
-            item.itemDoubleClicked.connect(self.double_clicked_predicted)
-            self.imageAreas.append(item)
-            self.middleArea.addWidget(item)
-
-        self.grid.addLayout(self.middleArea, 0, 1)
-
-        self.rightArea = QVBoxLayout()
-        self.validationArea = ImageGrid(str("validation"))
-        self.validationArea.setSelectionMode(QAbstractItemView.ExtendedSelection)
-
-        self.rightArea.addWidget(self.validationArea)
-        self.rightArea.addWidget(QLabel("Move selected to:"))
-
-        self.validationGrid = QGridLayout()
-        self.switchButtons = []
-
-        col = 0
-        row = 0
-        for i in range(10):
-            btn = QPushButton(str(i))
-            self.switchButtons.append(btn)
-            self.validationGrid.addWidget(btn, row, col)
-            btn.clicked.connect(self.clicked_switch)
-            col = col + 1
-            if i == 4:
-                col = 0
-                row = row + 1
-
-        self.rightArea.addLayout(self.validationGrid)
-
-        self.rightArea.addStretch()
-        self.grid.addLayout(self.rightArea, 0, 2)
-
-        self.outerArea.addLayout(self.grid)
-        self.outerArea.addStretch()
-        self.progress = MyProgressBar()
-        self.progress.setText('Not yet started')
-        self.outerArea.addWidget(self.progress)
-
-
-        self.setLayout(self.outerArea)
-
-
-        self.show()
-
-    def clicked_switch(self):
-        sending_button = self.sender()
-        print(sending_button)
-        items = self.validationArea.selectedItems()
-        index = int(sending_button.text())
-        if self.validationArea.isEmpty: return
-        for item in items:
-            item.parentIndex = index
-            self.imageAreas[index].addItem(self.validationArea.takeItem(self.validationArea.row(item)))
-
-    def double_clicked_predicted(self, item):
-        print("Done")
-        print(item)
-        if (item.parentIndex == None) or self.imageAreas[item.parentIndex].isEmpty: return
-        self.validationArea.addItem(self.imageAreas[item.parentIndex].takeItem(self.imageAreas[item.parentIndex].row(item)))
-
-
-    def reset_buttons(self):
-        self.run_button.setText("Run")
-        self.load_button.setText("Load Images")
-        self.run_button.setDisabled(False)
-        self.load_button.setDisabled(False)
-
-    def update_progress(self, amount):
-        self.progress.setValue(amount)
-
-    def testing_finished(self, accuracy, cls_pred):
-        print(accuracy)
-        print(cls_pred)
-        self.accuracyLabel.setText("Accuracy:" + str(accuracy * 100))
-
-        for i, predicted in enumerate(cls_pred):
+        for i, prob_array in enumerate(cls_pred):
             image = self.dataset.testing_images[i]
-            imageAreaForDigit = self.imageAreas[predicted]
-            print(image.reshape(44, -1))
-            imageAreaForDigit.add_image(image, predicted)
+            pred_index = np.argmax(prob_array)
+            prob = prob_array[pred_index]
+            labelForDigit = self.dataset.labels[pred_index]
+            for set in self.main_area_neural.sets:
+                if set.name == labelForDigit:
+                    item = set.add_image(image)
+                    if prob <= 0.5:
+                        item.set_important()
 
-    def created_neural_net(self, neuralNet):
-        self.neuralNet = neuralNet
-
-
-    @pyqtSlot()
-    def run_clicked(self):
-        self.testingAmount.setDisabled(True)
-        self.trainingAmount.setDisabled(True)
-        self.load_button.setDisabled(True)
-        self.run_button.setText("Running...")
-        self.run_button.setDisabled(True)
-
-        digits = []
-        image_data = []
-
-        for imageArea in self.imageAreas:
-            if imageArea.isEmpty: continue
-            for index in range(imageArea.count()):
-                item = imageArea.item(index)
-                if item == None: continue
-                print(item)
-                digits.append(item.parentIndex)
-                image_data.append(item.imageData)
-            imageArea.clear()
-
-        print("ADDING ", len(image_data), "ITEMS")
-        self.dataset.add_to_training_data(digits, image_data)
-        self.dataset.new_testing_data()
-
-        self.progress.setDefault()
-        self.obj = RunNeuralNet(self.dataset)  # no parent!
+    def run_neural_net(self):
+        self.left_area.progressModule.progress.setDefault()
+        self.obj = RunNeuralNet(self.dataset, img_size, len(self.main_area_neural.sets))  # no parent!
         self.thread = QThread()  # no parent!
 
         self.obj.moveToThread(self.thread)
-        self.obj.finished.connect(self.reset_buttons)
+        #self.obj.finished.connect(self.reset_buttons)
         self.obj.one_iteration.connect(self.update_progress)
         self.obj.testing_finished.connect(self.testing_finished)
         self.thread.started.connect(self.obj.long_running)
 
         self.thread.start()
 
-    @pyqtSlot()
-    def load_clicked(self):
-        print('Load images')
-        self.testingAmount.setDisabled(True)
-        self.trainingAmount.setDisabled(True)
-        self.load_button.setText("Loading...")
-        self.load_button.setDisabled(True)
-        self.progress.setDefault()
+    def add_toolbar_clicked(self):
+        folder_name = QFileDialog.getExistingDirectory(self, "Select Directory With Testing Images")
+
+        if folder_name:
+            self.main_area_neural.top_widget.setVisible(True)
+            self.main_area_neural.initial_image_grid.populate_from_folder(folder_name, self.update_progress)
+
+
+    def run_clicked(self):
+        sets = self.main_area_neural.sets
+
+        itemNames = []
+        itemData = []
+        setCount = 0
+
+        print("SETS LENGTH ", len(sets))
+
+        for set in sets:
+            setCount += 1
+            imageArea = set.image_grid
+            itemCount = len(set.all_images)
+            for index in range(itemCount):
+                item = set.all_images[index]
+                if item == None: continue
+                itemNames.append(set.name)
+                itemData.append(item.imageData)
+            set.clear()
+
+        self.dataset.add_sets_to_training_data(setCount, itemNames, itemData)
+
+        if self.first_run:
+            all_image_count = self.main_area_neural.initial_image_grid.count()
+            testing_images = []
+            for index in range(all_image_count):
+                item = self.main_area_neural.initial_image_grid.item(index)
+                if item == None: continue
+                testing_images.append(item.imageData)
+            self.main_area_neural.initial_image_grid.clear()
+            self.main_area_neural.top_widget.setVisible(False)
+            self.main_area_neural.initial_image_grid_visible = False
+            self.dataset.set_testing_data(testing_images)
+        else:
+            self.dataset.new_testing_data()
+
+        self.first_run = False
+
+        self.run_neural_net()
+
+    def open_sets(self):
+        fileName, filter = QFileDialog.getOpenFileName(self, 'Open sets save', base_dir + "Framework/saves",
+                                                       "Set Files (*.sets)")
+
+        if fileName:
+            self.current_save = fileName
+            self.main_area_neural.clear_sets()
+            self.left_area.progressModule.progress.setDefault()
+            self.obj = SaveLoad(self.current_save)  # no parent!
+            self.thread = QThread()  # no parent!
+
+            self.obj.moveToThread(self.thread)
+            self.obj.one_iteration.connect(self.update_progress)
+            self.obj.create_set.connect(self.main_area_neural.create_new_set)
+            self.obj.add_to_training_set.connect(self.main_area_neural.add_images_to_set)
+            self.obj.add_to_testing_set.connect(self.dataset.add_to_testing_data)
+            self.obj.finished.connect(self.dataset.new_testing_data)
+            self.thread.started.connect(self.obj.load_images)
+
+            self.thread.start()
+
+
+    def save_sets_as(self):
+        self.current_save = None
+        self.save_sets()
+
+    def save_sets(self):
+
+        if self.current_save:
+            fileName = self.current_save
+        else:
+            fileName, filter = QFileDialog.getSaveFileName(self, 'Save sets', base_dir + "Framework/saves",
+                                               "Set Files (*.sets)")
+
+        if fileName:
+            sets = self.main_area_neural.sets[:]
+            if self.main_area_neural.trash_set:
+                sets.append(self.main_area_neural.trash_set)
+            self.current_save = fileName
+            self.left_area.progressModule.progress.setDefault()
+            self.obj = SaveLoad(self.current_save, sets, self.dataset.all_testing_images)  # no parent!
+            self.thread = QThread()  # no parent!
+
+            self.obj.moveToThread(self.thread)
+            self.obj.one_iteration.connect(self.update_progress)
+            self.thread.started.connect(self.obj.save_images)
+
+            self.thread.start()
+            # os.remove(fileName)
+            # os.rename(fileName + ".gz", fileName)
+
+
+    def deleted_set(self, set_name):
+        self.datapanel.delete_training_row(set_name)
+
+    def added_to_set(self, set_name):
+        self.datapanel.increment_training_table(set_name)
+
+    def removed_from_set(self, set_name):
+        self.datapanel.decrement_training_table(set_name)
+
+    def menu_changed(self, index):
+        self.main_area_neural.setVisible(False)
+        self.main_area_settings.setVisible(False)
+        if index == 0:
+            self.main_area_neural.setVisible(True)
+        elif index == 2:
+            self.main_area_settings.setVisible(True)
+            self.main_area_settings.changed()
+
+    def init_ui(self):
+        self.settings = QSettings("Theo Styles", "Convolutional Neural Network")
+        self.settings.setValue("test", 1)
         self.dataset = DataSet(img_size)
-        self.obj = LoadImages(int(self.trainingAmount.text()), int(self.testingAmount.text()), self.dataset)  # no parent!
-        self.thread = QThread()  # no parent!
+        qss_file = open(base_dir + 'Framework/GUI/Stylesheets/default.qss').read()
+        self.setStyleSheet(qss_file)
 
-        self.obj.moveToThread(self.thread)
-        self.obj.finished.connect(self.reset_buttons)
-        self.obj.one_iteration.connect(self.update_progress)
-        self.thread.started.connect(self.obj.long_running)
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
 
-        self.thread.start()
+        self.main_grid = QSplitter()
+        self.main_grid.setObjectName("verticalSplitter")
+
+        self.main_grid.setContentsMargins(0, 0, 0, 0)
+
+        self.right_layout = QVBoxLayout()
+        self.right_widget = QWidget()
+        self.right_widget.setLayout(self.right_layout)
+
+
+        self.right_grid = QGridLayout()
+        self.right_grid.setColumnStretch(0, 3)
+        self.right_grid.setColumnStretch(1, 1)
+
+        self.right_layout.setContentsMargins(0, 0, 0, 0)
+        self.right_layout.setSpacing(0)
+        self.right_grid.setContentsMargins(0, 0, 0, 0)
+        self.right_grid.setSpacing(0)
+
+        self.datapanel = DataInfoPanel()
+        self.right_grid.addWidget(self.datapanel, 0, 1)
+
+        self.left_area = MenuPanel()
+        self.left_area.selectedItem.connect(self.menu_changed)
+
+        self.main_area_neural = NeuralNetSection()
+        self.main_area_neural.added_to_set.connect(self.added_to_set)
+        self.main_area_neural.removed_from_set.connect(self.removed_from_set)
+        self.main_area_neural.deleted_set.connect(self.deleted_set)
+        self.right_grid.addWidget(self.main_area_neural, 0, 0)
+
+        self.main_area_settings = SettingsSection()
+        self.right_grid.addWidget(self.main_area_settings, 0, 0)
+        self.main_area_settings.setVisible(False)
+
+        self.toolbar = ToolbarPanel()
+        self.toolbar.run_clicked.connect(self.run_clicked)
+        self.toolbar.add_clicked.connect(self.add_toolbar_clicked)
+        self.right_layout.addWidget(self.toolbar)
+        self.right_layout.addLayout(self.right_grid)
+
+
+        self.main_grid.addWidget(self.left_area)
+        self.main_grid.addWidget(self.right_widget)
+
+        self.setCentralWidget(self.main_grid)
+        self.main_grid.setStretchFactor(0, 5)
+        self.main_grid.setStretchFactor(1, 7)
+
+        save_action = QAction("&Save", self)
+        save_action.setShortcut("Ctrl+S")
+        save_action.setStatusTip('Save the current sets')
+        save_action.triggered.connect(self.save_sets)
+
+        save_action_as = QAction("&Save As", self)
+        save_action_as.setStatusTip('New save for the current sets')
+        save_action_as.triggered.connect(self.save_sets_as)
+
+        open_action = QAction("&Open", self)
+        open_action.setShortcut("Ctrl+O")
+        open_action.setStatusTip('Open a sets save file')
+        open_action.triggered.connect(self.open_sets)
+
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu('&File')
+        file_menu.addAction(open_action)
+        file_menu.addAction(save_action)
+        file_menu.addAction(save_action_as)
+
+
+
+
+        self.show()

@@ -2,8 +2,7 @@ import tensorflow as tf
 import time
 from datetime import timedelta
 import numpy as np
-from . import DataSet
-
+from PyQt5.QtCore import QSettings
 
 class NeuralNet:
     # Convolutional Layer 1.
@@ -53,7 +52,7 @@ class NeuralNet:
         self.num_classes = num_classes
         self.dataset = dataset
         self.session = tf.Session()
-        print("NEURAL NET SIZE IS", self.num_classes)
+        self.settings = QSettings("Theo Styles", "Convolutional Neural Network")
         self.run()
 
     def new_weights(self, shape):
@@ -202,33 +201,6 @@ class NeuralNet:
         if callback: callback(cls_pred)
 
 
-    def plot_example_errors(self, cls_pred, correct):
-        # This function is called from print_test_accuracy() below.
-
-        # cls_pred is an array of the predicted class-number for
-        # all images in the test-set.
-
-        # correct is a boolean array whether the predicted class
-        # is equal to the true class for each image in the test-set.
-
-        # Negate the boolean array.
-        incorrect = (correct == False)
-
-        # Get the images from the test-set that have been
-        # incorrectly classified.
-        images = self.dataset.testing_images[incorrect]
-
-        # Get the predicted classes for those images.
-        cls_pred = cls_pred[incorrect]
-
-        # Get the true classes for those images.
-        cls_true = self.dataset.testing_cls[incorrect]
-
-        # Plot the first 9 images.
-        self.dataset.plot_images(images=images[0:9],
-                    cls_true=cls_true[0:9],
-                    cls_pred=cls_pred[0:9])
-
     def optimize(self, num_iterations, callback=None):
         # Ensure we update the global variable rather than a local copy.
 
@@ -278,7 +250,6 @@ class NeuralNet:
         # Print the time-usage.
         print("Time usage: " + str(timedelta(seconds=int(round(time_dif)))))
 
-
     def close(self):
         self.session.close()
 
@@ -322,7 +293,7 @@ class NeuralNet:
                                                                 labels=self.y_true)
         cost = tf.reduce_mean(cross_entropy)
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-4).minimize(cost)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.settings.value("learning_rate", 1e-4)).minimize(cost)
 
         correct_prediction = tf.equal(self.y_pred_cls, self.y_true_cls)
 

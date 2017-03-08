@@ -10,12 +10,43 @@ QLabel{
     outline: none;
 }
 
-QLineEdit{
+QLineEdit, QSpinBox{
     background-color: #3e3e40;
     outline: none;
     border: none;
     border-radius: 3px;
     color: #d6d6d7;
+}
+
+QSpinBox{
+    padding: 5px;
+}
+
+QSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right; /* position at the top right corner */
+    background: #dfe0e6;
+    width: 16px; /* 16 + 2*1px border-width = 15px padding + 3px parent border */
+}
+
+QSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right; /* position at the top right corner */
+    background: #dfe0e6;
+
+    width: 16px; /* 16 + 2*1px border-width = 15px padding + 3px parent border */
+}
+
+QSpinBox::down-arrow {
+    image: url(images/down_arrow.svg);
+    width: 10px;
+    height: 10px;
+}
+
+QSpinBox::up-arrow {
+    image: url(images/up_arrow.svg);
+    width: 10px;
+    height: 10px;
 }
 
 QScrollArea{
@@ -35,7 +66,7 @@ QPushButton, QComboBox{
     min-height: 15px;
 }
 
-QPushButton, QComboBox, QLineEdit{
+QPushButton, QComboBox, QLineEdit, QSpinBox{
     min-height: 15px;
 }
 
@@ -315,4 +346,8 @@ QDialog QLineEdit{
     border: none;
     border-radius: 3px;
     color: #d6d6d7;
+}
+
+#settingsSection QLineEdit{
+    padding: 5px;
 }
