@@ -4,11 +4,9 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollAr
     QMessageBox, QLineEdit, QComboBox, QSplitter
 from PyQt5.QtGui import QStandardItem
 
-from Framework.GUI.Components import ImageGrid, CustomPushButton, CustomComboBox, Set, CustomDialog, ErrorDialog, InputDialog
+from GUI.Components import ImageGrid, CustomPushButton, CustomComboBox, Set, CustomDialog, ErrorDialog, InputDialog
 import numpy as np
 
-img_size = 44
-base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
 
 class NeuralNetSection(QWidget):
 
@@ -38,12 +36,13 @@ class NeuralNetSection(QWidget):
 
         self.expand_state = not self.expand_state
 
-
     def expand_all(self):
+        if self.trash_set: self.trash_set.expand()
         for set in self.sets:
             set.expand()
 
     def hide_all(self):
+        if self.trash_set: self.trash_set.hide()
         for set in self.sets:
             set.hide()
 
@@ -60,7 +59,6 @@ class NeuralNetSection(QWidget):
             if not self.trash_set:
                 self.sets.remove(trash_set)
             self.trash_set = trash_set
-
 
     def clicked_set(self, set):
         othersSelected = False
@@ -173,6 +171,7 @@ class NeuralNetSection(QWidget):
             self.main_layout.removeWidget(self.empty_label)
             self.empty_label.deleteLater()
             self.empty_label = None
+            self.buttons_widget.setVisible(True)
 
         self.main_layout.insertWidget(self.main_layout.count() - 1, new_set)
 
@@ -245,7 +244,12 @@ class NeuralNetSection(QWidget):
         titles = []
         matching = []
 
-        for set in self.sets:
+        sets_copy = self.sets[:]
+
+        if self.trash_set:
+            sets_copy.append(self.trash_set)
+
+        for set in sets_copy:
             titles.append(set.name)
             set.setVisible(False)
 
@@ -254,24 +258,34 @@ class NeuralNetSection(QWidget):
                 matching.append(i)
 
         for match in matching:
-            self.sets[match].setVisible(True)
+            sets_copy[match].setVisible(True)
 
     def sort_sets(self, sort_by):
         new_sets = []
-        if sort_by == 0:
-            self.sets.sort(key=lambda x: x.name, reverse=False)
-        elif sort_by == 1:
-            self.sets.sort(key=lambda x: x.name, reverse=True)
-        elif sort_by == 2:
-            self.sets.sort(key=lambda x: x.count(), reverse=False)
-        elif sort_by == 3:
-            self.sets.sort(key=lambda x: x.count(), reverse=True)
+        sets_copy = self.sets[:]
 
-        for set in self.sets:
+        if self.trash_set:
+            sets_copy.append(self.trash_set)
+
+        if sort_by == 0:
+            sets_copy.sort(key=lambda x: x.name, reverse=False)
+        elif sort_by == 1:
+            sets_copy.sort(key=lambda x: x.name, reverse=True)
+        elif sort_by == 2:
+            sets_copy.sort(key=lambda x: x.count(), reverse=False)
+        elif sort_by == 3:
+            sets_copy.sort(key=lambda x: x.count(), reverse=True)
+
+        for set in sets_copy:
             self.main_layout.removeWidget(set)
 
-        for set in self.sets:
+        for set in sets_copy:
             self.main_layout.insertWidget(self.main_layout.count() - 1, set)
+
+        if self.trash_set:
+            sets_copy.remove(self.trash_set)
+
+        self.sets = sets_copy
 
     def search_and_sort(self):
         self.sort_sets(self.sort_button.currentIndex())
@@ -289,7 +303,7 @@ class NeuralNetSection(QWidget):
         self.initial_image_grid = ImageGrid()
         self.add_button = CustomPushButton("+")
         self.add_button.setToolTip("Create a new set with the selected images")
-        self.trash_button = CustomPushButton("Delete")
+        self.trash_button = CustomPushButton("DELETE")
         self.trash_button.clicked.connect(self.trash_clicked)
         self.trash_button.setToolTip("Add to the trash set")
 
@@ -311,7 +325,11 @@ class NeuralNetSection(QWidget):
         self.lower_widget = QWidget()
         self.lower_widget.setLayout(self.lower_layout)
 
+        self.buttons_widget = QWidget()
+        self.buttons_widget.setVisible(False)
         self.buttons_layout = QHBoxLayout()
+        self.buttons_widget.setLayout(self.buttons_layout)
+
         self.expand_all_button = CustomPushButton("Hide All -")
         self.expand_all_button.setToolTip("Toggles visibility of sets below")
         self.expand_all_button.clicked.connect(self.expand_clicked)
@@ -333,7 +351,7 @@ class NeuralNetSection(QWidget):
         self.buttons_layout.addWidget(self.search_field)
         self.buttons_layout.addWidget(self.sort_button)
 
-        self.lower_layout.addLayout(self.buttons_layout)
+        self.lower_layout.addWidget(self.buttons_widget)
 
         self.main_layout = QVBoxLayout()
 
@@ -343,7 +361,7 @@ class NeuralNetSection(QWidget):
         self.scroll.setWidgetResizable(True)
 
         self.main_widget = QWidget()
-        self.empty_label = QLabel("No sets yet! Add some using the (+) button above.")
+        self.empty_label = QLabel("Add a folder of images using the + button above!")
         self.main_layout.addWidget(self.empty_label)
         self.main_layout.addStretch()
         self.main_widget.setLayout(self.main_layout)

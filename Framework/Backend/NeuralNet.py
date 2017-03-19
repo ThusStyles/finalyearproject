@@ -4,14 +4,16 @@ from datetime import timedelta
 import numpy as np
 from PyQt5.QtCore import QSettings
 
+
 class NeuralNet:
+
     # Convolutional Layer 1.
-    filter_size1 = 5  # Convolution filters are 5 x 5 pixels.
-    num_filters1 = 16  # There are 16 of these filters.
+    filter_size1 = 5
+    num_filters1 = 16
 
     # Convolutional Layer 2.
-    filter_size2 = 5  # Convolution filters are 5 x 5 pixels.
-    num_filters2 = 36  # There are 36 of these filters.
+    filter_size2 = 5
+    num_filters2 = 36
 
     # Fully-connected layer.
     fc_size = 128  # Number of neurons in fully-connected layer.
@@ -25,10 +27,8 @@ class NeuralNet:
     # Tuple with height and width of images used to reshape arrays.
     img_shape = (img_size, img_size)
 
-    # Number of colour channels for the images: 1 channel for gray-scale.
+    # Colour channels for gray scale images
     num_channels = 1
-
-    # Number of classes, one class for each of 10 digits.
     num_classes = 10
 
     total_iterations = 0

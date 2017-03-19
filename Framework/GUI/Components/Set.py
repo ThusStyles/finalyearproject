@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollAr
     QMessageBox, QLineEdit, QComboBox, QMenu, QAction
 from . import ImageGrid, ErrorDialog, InputDialog
 
+
 class Set(QWidget):
 
     clicked_set = pyqtSignal(QWidget)

@@ -11,6 +11,7 @@ class ToolbarPanel(QToolBar):
 
     run_clicked = pyqtSignal()
     add_clicked = pyqtSignal()
+    export_clicked = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -22,10 +23,24 @@ class ToolbarPanel(QToolBar):
     def add_to_testing(self):
         self.add_clicked.emit()
 
+    def export_sets(self):
+        self.export_clicked.emit()
+
+    def enable_action(self, x, y):
+        play = self.actionAt(x, y)
+        if play != 0:
+            play.setEnabled(True)
+
+    def disable_action(self, x, y):
+        play = self.actionAt(x, y)
+        if play != 0:
+            play.setEnabled(False)
+
     def init_ui(self):
         self.setContentsMargins(0, 0, 0, 0)
         self.addAction(QIcon(image_dir + "play-arrow.svg"), "Run Neural Network", self.run)
-        self.addAction(QIcon(image_dir + "add-plus-button.svg"), "Add folder to testing set", self.add_to_testing)
+        self.addAction(QIcon(image_dir + "add-plus-button.svg"), "Choose folder to be imported", self.add_to_testing)
+        self.addAction(QIcon(image_dir + "export.svg"), "Export sets into folders", self.export_sets)
 
 
 

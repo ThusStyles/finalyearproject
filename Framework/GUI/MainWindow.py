@@ -1,17 +1,16 @@
 import os
 
 import numpy as np
+from PIL import Image
 from PyQt5.QtCore import QThread, QSettings
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QMainWindow, QSplitter, QAction, QFileDialog
 
-from Framework.Backend import DataSet
-from Framework.GUI.Panels.DataInfoPanel import DataInfoPanel
-from Framework.GUI.Panels.MenuPanel import MenuPanel
-from Framework.GUI.Panels.ToolbarPanel import ToolbarPanel
-from Framework.GUI.Sections import NeuralNetSection, SettingsSection
-from Framework.GUI.ThreadOps import RunNeuralNet, SaveLoad
+from Backend import DataSet
+from GUI.Panels import DataInfoPanel, MenuPanel, ToolbarPanel
+from GUI.Sections import NeuralNetSection, SettingsSection
+from GUI.ThreadOps import RunNeuralNet, SaveLoad
+from GUI.Components import ErrorDialog
 
-img_size = 44
 base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
 
 
@@ -25,6 +24,8 @@ class MainWindow(QMainWindow):
         self.height = 560
         self.first_run = True
         self.current_save = None
+        self.settings = QSettings("Theo Styles", "Convolutional Neural Network")
+        self.img_size = self.settings.value("img_size", 44)
         self.init_ui()
 
     def update_progress(self, amount=0, status="Running"):
@@ -44,35 +45,60 @@ class MainWindow(QMainWindow):
                     if prob <= 0.5:
                         item.set_important()
 
+        self.toolbar.enable_action(0, 0)
+
     def run_neural_net(self):
         self.left_area.progressModule.progress.setDefault()
-        self.obj = RunNeuralNet(self.dataset, img_size, len(self.main_area_neural.sets))  # no parent!
+        self.obj = RunNeuralNet(self.dataset, self.img_size, len(self.main_area_neural.sets))  # no parent!
         self.thread = QThread()  # no parent!
 
         self.obj.moveToThread(self.thread)
-        #self.obj.finished.connect(self.reset_buttons)
         self.obj.one_iteration.connect(self.update_progress)
         self.obj.testing_finished.connect(self.testing_finished)
         self.thread.started.connect(self.obj.long_running)
 
         self.thread.start()
+        self.toolbar.disable_action(0, 0)
 
     def add_toolbar_clicked(self):
         folder_name = QFileDialog.getExistingDirectory(self, "Select Directory With Testing Images")
 
         if folder_name:
             self.main_area_neural.top_widget.setVisible(True)
+            self.main_area_neural.initial_image_grid_visible = True
+            self.main_area_neural.empty_label.setText("Now create sets by selecting images and using the + button to the right of the images!")
             self.main_area_neural.initial_image_grid.populate_from_folder(folder_name, self.update_progress)
+
+    def export_sets(self):
+        sets = self.main_area_neural.sets
+        if len(sets) == 0:
+            ErrorDialog.dialog(self, "There are no sets to export")
+            return
+
+        folder_name = QFileDialog.getExistingDirectory(self, "Select a directory to export to")
+
+        if folder_name:
+            self.left_area.progressModule.progress.setDefault()
+            self.obj = SaveLoad(sets=self.main_area_neural.sets, folder_name=folder_name)  # no parent!
+            self.thread = QThread()  # no parent!
+
+            self.obj.moveToThread(self.thread)
+            self.obj.one_iteration.connect(self.update_progress)
+            self.thread.started.connect(self.obj.export_sets)
+
+            self.thread.start()
 
 
     def run_clicked(self):
         sets = self.main_area_neural.sets
 
+        if len(sets) == 0:
+            ErrorDialog.dialog(self, "Please create at least one set before running the neural network")
+            return
+
         itemNames = []
         itemData = []
         setCount = 0
-
-        print("SETS LENGTH ", len(sets))
 
         for set in sets:
             setCount += 1
@@ -87,7 +113,7 @@ class MainWindow(QMainWindow):
 
         self.dataset.add_sets_to_training_data(setCount, itemNames, itemData)
 
-        if self.first_run:
+        if self.first_run or self.main_area_neural.initial_image_grid_visible:
             all_image_count = self.main_area_neural.initial_image_grid.count()
             testing_images = []
             for index in range(all_image_count):
@@ -156,7 +182,6 @@ class MainWindow(QMainWindow):
             # os.remove(fileName)
             # os.rename(fileName + ".gz", fileName)
 
-
     def deleted_set(self, set_name):
         self.datapanel.delete_training_row(set_name)
 
@@ -165,6 +190,18 @@ class MainWindow(QMainWindow):
 
     def removed_from_set(self, set_name):
         self.datapanel.decrement_training_table(set_name)
+
+    def set_testing_amount(self, amount):
+        self.datapanel.set_testing_amount(amount)
+
+    def switch_to_neural(self):
+        self.menu_changed(0)
+
+    def switch_to_reports(self):
+        self.menu_changed(1)
+
+    def switch_to_settings(self):
+        self.menu_changed(2)
 
     def menu_changed(self, index):
         self.main_area_neural.setVisible(False)
@@ -178,7 +215,8 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         self.settings = QSettings("Theo Styles", "Convolutional Neural Network")
         self.settings.setValue("test", 1)
-        self.dataset = DataSet(img_size)
+        self.dataset = DataSet(self.img_size)
+        self.dataset.test_set_changed.connect(self.set_testing_amount)
         qss_file = open(base_dir + 'Framework/GUI/Stylesheets/default.qss').read()
         self.setStyleSheet(qss_file)
 
@@ -194,45 +232,55 @@ class MainWindow(QMainWindow):
         self.right_widget = QWidget()
         self.right_widget.setLayout(self.right_layout)
 
-
-        self.right_grid = QGridLayout()
-        self.right_grid.setColumnStretch(0, 3)
-        self.right_grid.setColumnStretch(1, 1)
+        self.right_grid = QSplitter()
+        self.right_grid.setObjectName("verticalSplitter")
 
         self.right_layout.setContentsMargins(0, 0, 0, 0)
         self.right_layout.setSpacing(0)
         self.right_grid.setContentsMargins(0, 0, 0, 0)
-        self.right_grid.setSpacing(0)
 
-        self.datapanel = DataInfoPanel()
-        self.right_grid.addWidget(self.datapanel, 0, 1)
+        self.right_stacking = QWidget()
+        self.right_stacking_grid = QGridLayout()
+        self.right_stacking.setLayout(self.right_stacking_grid)
+        self.right_grid.addWidget(self.right_stacking)
 
-        self.left_area = MenuPanel()
-        self.left_area.selectedItem.connect(self.menu_changed)
+        self.right_stacking_grid.setContentsMargins(0, 0, 0, 0)
+        self.right_stacking_grid.setSpacing(0)
 
         self.main_area_neural = NeuralNetSection()
         self.main_area_neural.added_to_set.connect(self.added_to_set)
         self.main_area_neural.removed_from_set.connect(self.removed_from_set)
         self.main_area_neural.deleted_set.connect(self.deleted_set)
-        self.right_grid.addWidget(self.main_area_neural, 0, 0)
+        self.right_stacking_grid.addWidget(self.main_area_neural, 0, 0)
 
         self.main_area_settings = SettingsSection()
-        self.right_grid.addWidget(self.main_area_settings, 0, 0)
+        self.right_stacking_grid.addWidget(self.main_area_settings, 0, 0)
         self.main_area_settings.setVisible(False)
+
+
+        self.datapanel = DataInfoPanel()
+        self.right_grid.addWidget(self.datapanel)
+
+        self.right_grid.setStretchFactor(0, 10)
+        self.right_grid.setStretchFactor(1, 11)
+
+        self.left_area = MenuPanel()
+        self.left_area.selectedItem.connect(self.menu_changed)
 
         self.toolbar = ToolbarPanel()
         self.toolbar.run_clicked.connect(self.run_clicked)
         self.toolbar.add_clicked.connect(self.add_toolbar_clicked)
-        self.right_layout.addWidget(self.toolbar)
-        self.right_layout.addLayout(self.right_grid)
+        self.toolbar.export_clicked.connect(self.export_sets)
 
+        self.right_layout.addWidget(self.toolbar)
+        self.right_layout.addWidget(self.right_grid)
 
         self.main_grid.addWidget(self.left_area)
         self.main_grid.addWidget(self.right_widget)
 
         self.setCentralWidget(self.main_grid)
-        self.main_grid.setStretchFactor(0, 5)
-        self.main_grid.setStretchFactor(1, 7)
+        self.main_grid.setStretchFactor(0, 6)
+        self.main_grid.setStretchFactor(1, 10)
 
         save_action = QAction("&Save", self)
         save_action.setShortcut("Ctrl+S")
@@ -254,7 +302,21 @@ class MainWindow(QMainWindow):
         file_menu.addAction(save_action)
         file_menu.addAction(save_action_as)
 
+        neural_action = QAction("&Neural Net", self)
+        neural_action.setStatusTip('View the neural network')
+        neural_action.triggered.connect(self.switch_to_neural)
 
+        reports_action = QAction("&Reports", self)
+        reports_action.setStatusTip('View reports and statistics')
+        reports_action.triggered.connect(self.switch_to_reports)
 
+        settings_action = QAction("&Settings", self)
+        settings_action.setStatusTip('View settings')
+        settings_action.triggered.connect(self.switch_to_settings)
+
+        view_menu = menubar.addMenu('&View')
+        view_menu.addAction(neural_action)
+        view_menu.addAction(reports_action)
+        view_menu.addAction(settings_action)
 
         self.show()

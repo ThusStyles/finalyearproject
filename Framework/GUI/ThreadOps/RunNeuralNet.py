@@ -1,7 +1,7 @@
 import numpy as np
 from PyQt5.QtCore import QSettings, pyqtSignal, QObject, pyqtSlot
 
-from Framework.Backend.NeuralNet import NeuralNet
+from Backend.NeuralNet import NeuralNet
 
 
 class RunNeuralNet(QObject):

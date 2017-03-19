@@ -5,11 +5,10 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import (QPixmap, QIcon, QImage, qRgb)
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QListView, QAbstractItemView
 from skimage import io
-from Framework.GUI.Helpers import ImageHelpers
+from GUI.Helpers import ImageHelpers
 from . import CustomListWidgetItem
-from Framework.GUI.ThreadOps import PopulateImageGrid
+from GUI.ThreadOps import PopulateImageGrid
 
-img_size = 44
 grid_size_x = 33
 grid_size_y = 30
 item_size_x = 35
@@ -19,6 +18,8 @@ class ImageGrid(QListWidget):
     def __init__(self):
         super().__init__()
         self.isEmpty = True
+        self.settings = QSettings("Theo Styles", "Convolutional Neural Network")
+        self.img_size = self.settings.value("img_size", 44)
         self.init_ui()
 
     def add_image_from_thread(self, item, image):
@@ -40,9 +41,9 @@ class ImageGrid(QListWidget):
             self.setGridSize(QSize(item_size_x, item_size_y))
 
         item = CustomListWidgetItem(image)
-        image = image.reshape(44, -1)
+        image = image.reshape(self.img_size, -1)
         image = ImageHelpers.toQImage(image)
-        pixmap = QPixmap(img_size, img_size)
+        pixmap = QPixmap(self.img_size, self.img_size)
         pixmap.convertFromImage(image)
         icon = QIcon(pixmap)
         item.setIcon(icon)
@@ -58,7 +59,6 @@ class ImageGrid(QListWidget):
             if np.array_equal(item.imageData, image):
                 deleted = self.takeItem(i)
                 print("DELETING ", item)
-
 
     def populate_from_folder(self, folder_name, one_iteration=None):
         self.obj = PopulateImageGrid(folder_name)  # no parent!

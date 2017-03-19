@@ -4,7 +4,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import (QFont, QPainter)
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QStyle, QStyleOption
 
-from Framework.GUI.Components import CustomPushButton
+from GUI.Components import CustomPushButton
 
 base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"
 image_dir = base_dir + "images/"

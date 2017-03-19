@@ -4,7 +4,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import (qRgb, QPainter, QFont)
 from PyQt5.QtWidgets import QListWidgetItem, QWidget, QVBoxLayout, QLabel, QListWidget, QAbstractItemView, QStyle, QStyleOption
 
-from Framework.GUI.Components import CustomProgressBar
+from GUI.Components import CustomProgressBar
 
 img_size = 44
 base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"

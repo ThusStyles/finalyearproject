@@ -10,7 +10,7 @@ QLabel{
     outline: none;
 }
 
-QLineEdit, QSpinBox{
+QLineEdit, QSpinBox, QDoubleSpinBox{
     background-color: #3e3e40;
     outline: none;
     border: none;
@@ -18,18 +18,18 @@ QLineEdit, QSpinBox{
     color: #d6d6d7;
 }
 
-QSpinBox{
+QSpinBox, QDoubleSpinBox{
     padding: 5px;
 }
 
-QSpinBox::up-button {
+QSpinBox::up-button, QDoubleSpinBox::up-button {
     subcontrol-origin: border;
     subcontrol-position: top right; /* position at the top right corner */
     background: #dfe0e6;
     width: 16px; /* 16 + 2*1px border-width = 15px padding + 3px parent border */
 }
 
-QSpinBox::down-button {
+QSpinBox::down-button, QDoubleSpinBox::down-button {
     subcontrol-origin: border;
     subcontrol-position: bottom right; /* position at the top right corner */
     background: #dfe0e6;
@@ -37,13 +37,13 @@ QSpinBox::down-button {
     width: 16px; /* 16 + 2*1px border-width = 15px padding + 3px parent border */
 }
 
-QSpinBox::down-arrow {
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
     image: url(images/down_arrow.svg);
     width: 10px;
     height: 10px;
 }
 
-QSpinBox::up-arrow {
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
     image: url(images/up_arrow.svg);
     width: 10px;
     height: 10px;

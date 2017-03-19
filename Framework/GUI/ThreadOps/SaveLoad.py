@@ -1,7 +1,8 @@
 import os
 
 from PyQt5.QtCore import *
-from Framework.Backend.NeuralNet import NeuralNet
+from Backend.NeuralNet import NeuralNet
+from PIL import Image
 import numpy as np
 import gzip
 
@@ -13,12 +14,35 @@ class SaveLoad(QObject):
     add_to_testing_set = pyqtSignal(object)
     one_iteration = pyqtSignal(int, str)
 
-    def __init__(self, filename, sets=None, testing_images=None):
+    def __init__(self, filename=None, sets=None, testing_images=None, folder_name=None):
         super().__init__()
         self.filename = filename
         self.sets = sets
         self.testing_images = testing_images
+        self.folder_name = folder_name
 
+    def export_sets(self):
+        total_image_count = 0
+        images_done = 0
+
+        for set in self.sets:
+            total_image_count += len(set.all_images)
+
+        for set in self.sets:
+            set_dir = os.path.join(self.folder_name, set.name)
+            if not os.path.exists(set_dir):
+                os.makedirs(set_dir)
+            images = set.all_images
+            for i, image in enumerate(images):
+                images_done += 1
+                new_img = Image.fromarray(image.imageData.reshape(44, -1))
+                img_title = image.title
+                if not image.title:
+                    img_title = set.name + "-" + str(i) + ".tif"
+                new_img.save(os.path.join(set_dir, img_title))
+                self.finished_one_iteration(images_done / (total_image_count - 1), "Exporting set " + set.name)
+
+        self.finished.emit()
 
     def load_images(self):
         inF = gzip.open(self.filename, 'rb')

@@ -1,10 +1,10 @@
 import os
 
 import numpy as np
-from PyQt5.Qt import QSettings
+from PyQt5.Qt import QSettings, pyqtSignal, QObject
 
 
-class DataSet:
+class DataSet(QObject):
 
     training_limit = 100
     testing_limit = 200
@@ -24,7 +24,10 @@ class DataSet:
     img_shape = ()
     base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../"
 
+    test_set_changed = pyqtSignal(int)
+
     def __init__(self, img_size):
+        super().__init__()
         self.settings = QSettings("Theo Styles", "Convolutional Neural Network")
         self.img_shape = (img_size, img_size)
         self.training_labels = np.array([])
@@ -60,6 +63,7 @@ class DataSet:
         self.total_iterations = 0
         self.epochs_completed = 0
         self.training_limit = len(self.training_images)
+        print("TRAINING AMOUNT", len(self.training_images))
 
     def set_testing_data(self, images):
         self.all_testing_images = images
@@ -67,6 +71,7 @@ class DataSet:
 
     def add_to_testing_data(self, image):
         self.all_testing_images.append(image)
+        self.test_set_changed.emit(len(self.all_testing_images))
 
     def new_testing_data(self):
         self.testing_images = []
@@ -78,6 +83,8 @@ class DataSet:
         print("SIZE OF TESITNG IMAGES BEFORE", len(self.all_testing_images))
         self.all_testing_images = self.all_testing_images[self.current_testing_max:]
         print("SIZE OF TESITNG IMAGES AFTER", len(self.all_testing_images))
+
+        self.test_set_changed.emit(len(self.all_testing_images))
 
         self.testing_images = np.array(self.testing_images)
         np.random.shuffle(self.testing_images)

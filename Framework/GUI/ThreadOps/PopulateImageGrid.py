@@ -4,8 +4,8 @@ import numpy as np
 from PyQt5.QtCore import *
 from PyQt5.QtGui import (QImage)
 
-from Framework.GUI.Components import CustomListWidgetItem
-from Framework.GUI.Helpers import ImageHelpers
+from GUI.Components import CustomListWidgetItem
+from GUI.Helpers import ImageHelpers
 
 class PopulateImageGrid(QObject):
 
@@ -27,7 +27,7 @@ class PopulateImageGrid(QObject):
             image = ImageHelpers.resize_image(os.path.join(self.folder_name, file), (44, 44))
             image = np.array(image).reshape(-1)
             self.added_image.emit(image)
-            item = CustomListWidgetItem(image)
+            item = CustomListWidgetItem(image, file)
             image = image.reshape(44, -1)
             image = ImageHelpers.toQImage(image)
             self.added.emit(item, image)

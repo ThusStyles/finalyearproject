@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QSettings, Qt, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QLineEdit, QFormLayout, QSpinBox, QPushButton
+from PyQt5.QtWidgets import QWidget, QLineEdit, QFormLayout, QSpinBox, QPushButton, QDoubleSpinBox
 
 
 class SettingsSection(QWidget):
@@ -17,7 +17,7 @@ class SettingsSection(QWidget):
     def save_settings(self):
         self.settings.setValue("testing_amount", self.testing_set_size.value())
         self.settings.setValue("iteration_amount", self.iteration_size.value())
-        self.settings.setValue("learning_rate", float(self.learning_rate.text()))
+        self.settings.setValue("learning_rate", self.learning_rate.value())
         self.save_button.setDisabled(True)
         self.save_button.setText("Saved")
 
@@ -29,21 +29,27 @@ class SettingsSection(QWidget):
 
         self.testing_set_size = QSpinBox()
         self.testing_set_size.setMaximum(1000000)
+        self.testing_set_size.setSingleStep(100)
         self.testing_set_size.setValue(self.settings.value("testing_amount", 100))
         self.testing_set_size.setAttribute(Qt.WA_MacShowFocusRect, False)
 
         self.iteration_size = QSpinBox()
         self.iteration_size.setMaximum(1000000)
+        self.iteration_size.setSingleStep(100)
         self.iteration_size.setValue(self.settings.value("iteration_amount", 100))
         self.iteration_size.setAttribute(Qt.WA_MacShowFocusRect, False)
 
-        self.learning_rate = QLineEdit()
-        self.learning_rate.setText(repr(self.settings.value("learning_rate", repr(1e-4))))
+        self.learning_rate = QDoubleSpinBox()
+        self.learning_rate.setSingleStep(1e-4)
+        self.learning_rate.setMaximum(1)
+        self.learning_rate.setMinimum(0)
+        self.learning_rate.setDecimals(4)
+        self.learning_rate.setValue(self.settings.value("learning_rate", 1e-4))
         self.learning_rate.setAttribute(Qt.WA_MacShowFocusRect, False)
 
         self.testing_set_size.valueChanged.connect(self.changed)
         self.iteration_size.valueChanged.connect(self.changed)
-        self.learning_rate.textChanged.connect(self.changed)
+        self.learning_rate.valueChanged.connect(self.changed)
 
         self.overall_layout.addRow("Testing set size per iteration", self.testing_set_size)
         self.overall_layout.addRow("Neural Network number of iterations", self.iteration_size)
