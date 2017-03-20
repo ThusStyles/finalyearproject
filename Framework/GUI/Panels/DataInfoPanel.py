@@ -69,6 +69,8 @@ class Datatable(QTableWidget):
 
 class DataInfoPanel(QWidget):
 
+    clicked_training_view_all_sig = pyqtSignal()
+
     def __init__(self):
         super().__init__()
         self.init_ui()
@@ -102,6 +104,9 @@ class DataInfoPanel(QWidget):
         print("decrement called")
         self.trainingTable.decrement_set(set)
 
+    def clicked_training_view_all(self):
+        self.clicked_training_view_all_sig.emit()
+
     def init_ui(self):
 
         self.layout = QVBoxLayout()
@@ -120,6 +125,7 @@ class DataInfoPanel(QWidget):
         self.trainingTable.setVisible(False)
         self.trainingTable.added.connect(self.added_to_table)
         self.trainingViewAll = CustomPushButton("View all")
+        self.trainingViewAll.clicked.connect(self.clicked_training_view_all)
         self.trainingViewAll.setVisible(False)
         self.layout.addWidget(self.trainingTable)
         self.layout.addWidget(self.empty_label)

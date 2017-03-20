@@ -17,15 +17,23 @@ class Set(QWidget):
     def __init__(self, name):
         super().__init__()
         self.name = name
-        self.items = []
         self.hidden = False
         self.create_new_set_linked = False
         self.init_ui()
-        self.sets = []
         self.all_images = []
 
     def count(self):
         return self.image_grid.count()
+
+    def show_all(self):
+        items = []
+        for index in range(self.image_grid.count()):
+            items.append(self.image_grid.item(index))
+
+        print("SIZE OF ALL ", self.name, len(items), len(self.all_images))
+        diff = [item for item in self.all_images if item not in items]
+        for image in diff:
+            self.addItem(image, False)
 
     def expand(self):
         self.image_grid.setVisible(True)
@@ -42,12 +50,10 @@ class Set(QWidget):
             self.hide()
 
     def add_items(self, items):
-        self.items = items
-        for item in self.items:
+        for item in items:
             self.addItem(item)
 
     def add_images(self, items):
-        self.items = []
         for item in items:
             added_item = self.add_image(item)
             self.items.append(added_item)
@@ -96,16 +102,18 @@ class Set(QWidget):
         self.image_grid.setVisible(self.hidden)
         self.hidden = not self.hidden
 
-    def addItem(self, item):
+    def addItem(self, item, emit=True):
         self.image_grid.addItem(item)
         self.all_images.append(item)
-        self.added_image.emit(self.name)
+        if emit:
+            self.added_image.emit(self.name)
         self.setItemCount(self.image_grid.count())
 
-    def add_image(self, image):
+    def add_image(self, image, emit=True):
         item = self.image_grid.add_image(image)
         self.all_images.append(item)
-        self.added_image.emit(self.name)
+        if emit:
+            self.added_image.emit(self.name)
         self.setItemCount(self.image_grid.count())
         return item
 
@@ -171,7 +179,7 @@ class Set(QWidget):
 
         self.item_selected_label = QLabel()
         self.item_count_label = QLabel()
-        self.setItemCount(len(self.items))
+        self.setItemCount(0)
         self.label_layout.addWidget(self.item_selected_label)
         self.label_layout.addStretch()
         self.label_layout.addWidget(self.item_count_label)
