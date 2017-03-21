@@ -1,7 +1,8 @@
 import os
-from PIL import Image, ImageChops, ImageOps
-from PyQt5.QtGui import (QPixmap, QIcon, QImage, qRgb)
+
 import numpy as np
+from PIL import Image, ImageChops, ImageOps
+from PyQt5.QtGui import (QImage, qRgb)
 
 gray_color_table = [qRgb(i, i, i) for i in range(256)]
 base_dir = os.path.dirname(os.path.realpath(__file__)) + "/../../"

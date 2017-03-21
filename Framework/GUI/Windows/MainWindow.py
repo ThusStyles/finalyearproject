@@ -1,17 +1,16 @@
-import os
-
 import numpy as np
-from PIL import Image
 from PyQt5.QtCore import QThread, QSettings
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QMainWindow, QSplitter, QAction, QFileDialog
 
 from Backend import DataSet
+from GUI.Components import ErrorDialog
+from GUI.Helpers import PathHelpers
 from GUI.Panels import DataInfoPanel, MenuPanel, ToolbarPanel
 from GUI.Sections import NeuralNetSection, SettingsSection
 from GUI.ThreadOps import RunNeuralNet, SaveLoad
-from GUI.Components import ErrorDialog
+from .TestingWindow import TestingWindow
 from .TrainingWindow import TrainingWindow
-from GUI.Helpers import PathHelpers
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -65,7 +64,8 @@ class MainWindow(QMainWindow):
         if folder_name:
             self.main_area_neural.top_widget.setVisible(True)
             self.main_area_neural.initial_image_grid_visible = True
-            self.main_area_neural.empty_label.setText("Now create sets by selecting images and using the + button to the right of the images!")
+            if self.main_area_neural.empty_label:
+                self.main_area_neural.empty_label.setText("Now create sets by selecting images and using the + button to the right of the images!")
             self.main_area_neural.initial_image_grid.populate_from_folder(folder_name, self.update_progress)
 
     def export_sets(self):
@@ -133,6 +133,8 @@ class MainWindow(QMainWindow):
     def open_sets(self):
         fileName, filter = QFileDialog.getOpenFileName(self, 'Open sets save', PathHelpers.getPath("saves"),
                                                        "Set Files (*.sets)")
+
+        print("Opening ", fileName)
 
         if fileName:
             self.current_save = fileName
@@ -219,6 +221,10 @@ class MainWindow(QMainWindow):
         self.training_window = TrainingWindow(self, sets)
         self.training_window.show()
 
+    def view_all_testing(self):
+        self.testing_window = TestingWindow(self, self.dataset.all_testing_images)
+        self.testing_window.show()
+
     def init_ui(self):
         self.settings = QSettings("Theo Styles", "Convolutional Neural Network")
         self.settings.setValue("test", 1)
@@ -267,6 +273,7 @@ class MainWindow(QMainWindow):
 
         self.datapanel = DataInfoPanel()
         self.datapanel.clicked_training_view_all_sig.connect(self.view_all_training)
+        self.datapanel.clicked_testing_view_all_sig.connect(self.view_all_testing)
         self.right_grid.addWidget(self.datapanel)
 
         self.right_grid.setStretchFactor(0, 10)

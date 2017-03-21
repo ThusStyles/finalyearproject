@@ -15,8 +15,13 @@ class NeuralNet:
     filter_size2 = 5
     num_filters2 = 36
 
+    # Convolutional Layer 3.
+    filter_size3 = 5
+    num_filters3 = 64
+
     # Fully-connected layer.
-    fc_size = 128  # Number of neurons in fully-connected layer.
+    fc_size_1 = 256  # Number of neurons in fully-connected layer 1.
+    fc_size_2 = 128  # Number of neurons in fully-connected layer 2.
 
     # Colour channels for gray scale images
     num_channels = 1
@@ -107,7 +112,6 @@ class NeuralNet:
         num_test = len(self.dataset.testing_images)
 
         cls_pred = np.zeros(shape=(num_test, self.num_classes), dtype=np.float64)
-        keep_prob = tf.placeholder(tf.float32)
 
         i = 0
 
@@ -136,7 +140,7 @@ class NeuralNet:
             if callback: callback((i + 1) / num_iterations)
 
             if i % 100 == 0:
-                acc = self.session.run(self.accuracy, feed_dict=feed_dict_train)
+                self.session.run(self.accuracy, feed_dict=feed_dict_train)
 
         self.total_iterations += num_iterations
 
@@ -150,6 +154,7 @@ class NeuralNet:
         x_image = tf.reshape(self.x, [-1, self.img_size, self.img_size, self.num_channels])
         self.y_true = tf.placeholder(tf.float32, shape=[None, self.num_classes], name='y_true')
         self.y_true_cls = tf.argmax(self.y_true, dimension=1)
+
         layer_conv1, weights_conv1 = \
             self.new_conv_layer(input=x_image,
                            num_input_channels=self.num_channels,
@@ -162,23 +167,37 @@ class NeuralNet:
                            filter_size=self.filter_size2,
                            num_filters=self.num_filters2,
                            use_pooling=True)
-        layer_flat, num_features = self.flatten_layer(layer_conv2)
+        layer_conv3, weights_conv3 = \
+            self.new_conv_layer(input=layer_conv2,
+                                num_input_channels=self.num_filters2,
+                                filter_size=self.filter_size3,
+                                num_filters=self.num_filters3,
+                                use_pooling=True)
+
+        layer_flat, num_features = self.flatten_layer(layer_conv3)
+
+
         layer_fc1 = self.get_fully_connected_layer(input=layer_flat,
                                  num_inputs=num_features,
-                                 num_outputs=self.fc_size,
+                                 num_outputs=self.fc_size_1,
                                  use_relu=True)
         layer_fc2 = self.get_fully_connected_layer(input=layer_fc1,
-                                 num_inputs=self.fc_size,
+                                                   num_inputs=self.fc_size_1,
+                                                   num_outputs=self.fc_size_2,
+                                                   use_relu=True)
+
+        final_layer = self.get_fully_connected_layer(input=layer_fc2,
+                                 num_inputs=self.fc_size_2,
                                  num_outputs=self.num_classes,
                                  use_relu=False)
 
-        self.y_pred = tf.nn.softmax(layer_fc2)
+        self.y_pred = tf.nn.softmax(final_layer)
         self.y_pred_cls = tf.argmax(self.y_pred, dimension=1)
-        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=layer_fc2,
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=final_layer,
                                                                 labels=self.y_true)
         cost = tf.reduce_mean(cross_entropy)
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.settings.value("learning_rate", 1e-4)).minimize(cost)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=float(self.settings.value("learning_rate", 1e-4))).minimize(cost)
 
         correct_prediction = tf.equal(self.y_pred_cls, self.y_true_cls)
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))

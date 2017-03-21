@@ -1,11 +1,8 @@
-import os
+import numpy as np
 from PyQt5.QtCore import *
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QAbstractItemView, QInputDialog, \
-    QMessageBox, QLineEdit, QComboBox, QSplitter
-from PyQt5.QtGui import QStandardItem
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QLineEdit, QSplitter
 
 from GUI.Components import ImageGrid, CustomPushButton, CustomComboBox, Set, CustomDialog, ErrorDialog, InputDialog
-import numpy as np
 
 
 class NeuralNetSection(QWidget):
@@ -14,10 +11,9 @@ class NeuralNetSection(QWidget):
     removed_from_set = pyqtSignal(str)
     deleted_set = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, sets=None):
         super().__init__()
-        self.init_ui()
-        self.sets = []
+        self.sets = sets if sets else []
         self.trash_set = None
         self.expand_state = False
         self.dont_ask = False
@@ -25,6 +21,7 @@ class NeuralNetSection(QWidget):
         self.initial_image_grid_visible = True
         self.current_index = 0
         self.selected_items = []
+        self.init_ui()
 
     def expand_clicked(self):
         if self.expand_state:
@@ -149,6 +146,13 @@ class NeuralNetSection(QWidget):
             self.main_layout.removeWidget(set)
             set.deleteLater()
         self.sets = []
+
+    def add_sets(self):
+        for set in self.sets:
+            if set.name == "Trash":
+                self.trash_set = set
+            self.main_layout.insertWidget(self.main_layout.count() - 1, set)
+        self.search_and_sort()
 
     def create_new_set(self, name, items):
         if name == "": return
@@ -380,6 +384,5 @@ class NeuralNetSection(QWidget):
 
         self.overall_layout.addWidget(self.main_splitter)
         self.setLayout(self.overall_layout)
-
 
 

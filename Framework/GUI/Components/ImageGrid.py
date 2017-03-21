@@ -1,13 +1,11 @@
-import os
-
 import numpy as np
 from PyQt5.QtCore import *
-from PyQt5.QtGui import (QPixmap, QIcon, QImage, qRgb)
+from PyQt5.QtGui import (QPixmap, QIcon)
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QListView, QAbstractItemView
-from skimage import io
+
 from GUI.Helpers import ImageHelpers
-from . import CustomListWidgetItem
 from GUI.ThreadOps import PopulateImageGrid
+from . import CustomListWidgetItem
 
 grid_size_x = 33
 grid_size_y = 30

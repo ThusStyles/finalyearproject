@@ -1,7 +1,5 @@
-from PyQt5.QtWidgets import QListWidgetItem, QWidget, QLabel, QVBoxLayout
-from PyQt5.QtGui import (QPixmap, QIcon, QImage, qRgb, QColor)
-from PyQt5.QtCore import *
-from GUI.Helpers import ImageHelpers
+from PyQt5.QtGui import (QColor)
+from PyQt5.QtWidgets import QListWidgetItem
 
 
 class CustomListWidgetItem(QListWidgetItem):

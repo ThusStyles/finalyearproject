@@ -1,6 +1,6 @@
 from PyQt5.QtCore import *
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QAbstractItemView, QInputDialog, \
-    QMessageBox, QLineEdit, QComboBox, QMenu, QAction
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QMenu, QAction
+
 from . import ImageGrid, ErrorDialog, InputDialog
 
 
@@ -40,6 +40,8 @@ class Set(QWidget):
         self.hidden = False
 
     def hide(self):
+        count = len(self.image_grid.selectedIndexes())
+        if count > 0: return
         self.image_grid.setVisible(False)
         self.hidden = True
 
@@ -151,6 +153,7 @@ class Set(QWidget):
                 self.popMenu.removeAction(self.new_set_action)
                 self.popMenu.removeAction(self.move_selected_action)
                 self.popMenu.removeAction(self.move_selected_trash_action)
+                self.hide_action.setVisible(True)
                 self.create_new_set_linked = False
         else:
             self.item_selected_label.setText("(" + str(count) + " selected)")
@@ -159,7 +162,15 @@ class Set(QWidget):
                 self.popMenu.addAction(self.new_set_action)
                 self.popMenu.addAction(self.move_selected_action)
                 self.popMenu.addAction(self.move_selected_trash_action)
+                self.hide_action.setVisible(False)
                 self.create_new_set_linked = True
+
+    def disable_set_operations(self):
+        self.rename_action.setVisible(False)
+        self.delete_action.setVisible(False)
+        self.move_selected_action.setVisible(False)
+        self.move_selected_trash_action.setVisible(False)
+        self.new_set_action.setVisible(False)
 
     def init_ui(self):
         self.overall_layout = QVBoxLayout()
@@ -198,21 +209,21 @@ class Set(QWidget):
 
         # create context menu
         self.popMenu = QMenu(self)
-        hide_action = QAction('Hide/Expand', self)
-        rename_action = QAction('Rename set', self)
-        delete_action = QAction('Delete set', self)
-        rename_action.triggered.connect(self.rename_set)
-        delete_action.triggered.connect(self.delete_set)
+        self.hide_action = QAction('Hide/Expand', self)
+        self.rename_action = QAction('Rename set', self)
+        self.delete_action = QAction('Delete set', self)
+        self.rename_action.triggered.connect(self.rename_set)
+        self.delete_action.triggered.connect(self.delete_set)
         self.new_set_action = QAction("Create new set with selected", self)
         self.new_set_action.triggered.connect(self.new_set_with_selected)
         self.move_selected_action = QAction("Move selected to set", self)
         self.move_selected_action.triggered.connect(self.move_selected)
         self.move_selected_trash_action = QAction("Move selected to trash set", self)
         self.move_selected_trash_action.triggered.connect(self.move_selected_trash)
-        hide_action.triggered.connect(self.toggle_visibility)
-        self.popMenu.addAction(hide_action)
-        self.popMenu.addAction(rename_action)
-        self.popMenu.addAction(delete_action)
+        self.hide_action.triggered.connect(self.toggle_visibility)
+        self.popMenu.addAction(self.hide_action)
+        self.popMenu.addAction(self.rename_action)
+        self.popMenu.addAction(self.delete_action)
         self.popMenu.setStyleSheet("""
         QMenu{
             background: #d6d6d7;

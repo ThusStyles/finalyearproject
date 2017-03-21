@@ -1,10 +1,9 @@
+import gzip
 import os
 
-from PyQt5.QtCore import *
-from Backend.NeuralNet import NeuralNet
-from PIL import Image
 import numpy as np
-import gzip
+from PIL import Image
+from PyQt5.QtCore import *
 
 class SaveLoad(QObject):
 

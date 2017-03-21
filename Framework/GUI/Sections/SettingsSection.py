@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QSettings, Qt, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QLineEdit, QFormLayout, QSpinBox, QPushButton, QDoubleSpinBox
+from PyQt5.QtWidgets import QWidget, QFormLayout, QSpinBox, QPushButton, QDoubleSpinBox
 
 
 class SettingsSection(QWidget):
@@ -44,7 +44,7 @@ class SettingsSection(QWidget):
         self.learning_rate.setMaximum(1)
         self.learning_rate.setMinimum(0)
         self.learning_rate.setDecimals(4)
-        self.learning_rate.setValue(self.settings.value("learning_rate", 1e-4))
+        self.learning_rate.setValue(float(self.settings.value("learning_rate", 1e-4)))
         self.learning_rate.setAttribute(Qt.WA_MacShowFocusRect, False)
 
         self.testing_set_size.valueChanged.connect(self.changed)

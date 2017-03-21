@@ -70,6 +70,7 @@ class Datatable(QTableWidget):
 class DataInfoPanel(QWidget):
 
     clicked_training_view_all_sig = pyqtSignal()
+    clicked_testing_view_all_sig = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -107,6 +108,9 @@ class DataInfoPanel(QWidget):
     def clicked_training_view_all(self):
         self.clicked_training_view_all_sig.emit()
 
+    def clicked_testing_view_all(self):
+        self.clicked_testing_view_all_sig.emit()
+
     def init_ui(self):
 
         self.layout = QVBoxLayout()
@@ -136,6 +140,7 @@ class DataInfoPanel(QWidget):
         self.testing_label.setFont(font)
         self.testing_quantity = QLabel("0 items")
         self.testingViewAll = CustomPushButton("View all")
+        self.testingViewAll.clicked.connect(self.clicked_testing_view_all)
         self.layout.addWidget(self.testing_quantity)
         self.layout.addWidget(self.testingViewAll)
         self.testingViewAll.setVisible(False)
