@@ -55,8 +55,7 @@ class ImageGrid(QListWidget):
             item = self.item(i)
             if item == None: continue
             if np.array_equal(item.imageData, image):
-                deleted = self.takeItem(i)
-                print("DELETING ", item)
+                self.takeItem(i)
 
     def populate_from_folder(self, folder_name, one_iteration=None):
         self.obj = PopulateImageGrid(folder_name)  # no parent!

@@ -13,5 +13,4 @@ class PathHelpers():
 
     @staticmethod
     def getPath(filename):
-        print(base_dir)
         return os.path.join(base_dir, filename)

@@ -74,9 +74,6 @@ class ReportsSection(QWidget):
 
     def plot_line(self, figure, canvas, x_data, y_data, title, y_title, x_title):
 
-        print(x_data)
-        print(y_data)
-
         # create an axis
         ax = figure.add_subplot(111)
 

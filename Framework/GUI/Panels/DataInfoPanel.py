@@ -102,7 +102,6 @@ class DataInfoPanel(QWidget):
         self.trainingTable.increment_set(set)
 
     def decrement_training_table(self, set):
-        print("decrement called")
         self.trainingTable.decrement_set(set)
 
     def clicked_training_view_all(self):

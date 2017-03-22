@@ -19,6 +19,7 @@ class NeuralNetSection(QWidget):
         self.dont_ask = False
         self.dont_ask_trash = False
         self.initial_image_grid_visible = True
+        self.settings = QSettings("Theo Styles", "Convolutional Neural Network")
         self.current_index = 0
         self.selected_items = []
         self.init_ui()
@@ -66,8 +67,6 @@ class NeuralNetSection(QWidget):
                 break
         if not othersSelected: return
         if len(set.image_grid.selectedIndexes()) > 0: return
-
-        print("None selected on set " + set.name)
 
         if not self.dont_ask:
             ok, dont_ask = CustomDialog.dialog(self, "Are you sure you want to add items to set " + set.name + "?")
@@ -245,11 +244,12 @@ class NeuralNetSection(QWidget):
                 if len(text) == 0:
                     return self.show_error("You must enter a set name")
                 for set in self.sets:
-                    if set.name == text:
-                        ErrorDialog.dialog(self, "There is already a set with this name")
-                        index = self.initial_image_grid.currentRow() + 1
-                        self.initial_image_grid.setCurrentRow(index)
-                        return
+                    if self.settings.value("limit_to_one_initially") == "true":
+                        if set.name == text:
+                            ErrorDialog.dialog(self, "There is already a set with this name")
+                            index = self.initial_image_grid.currentRow() + 1
+                            self.initial_image_grid.setCurrentRow(index)
+                            return
                 index = self.initial_image_grid.currentRow()
                 self.add_or_create_set(text)
                 self.initial_image_grid.setCurrentRow(index)

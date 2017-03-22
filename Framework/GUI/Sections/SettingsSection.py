@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QSettings, Qt, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QFormLayout, QSpinBox, QPushButton, QDoubleSpinBox
+from PyQt5.QtWidgets import QWidget, QFormLayout, QSpinBox, QPushButton, QDoubleSpinBox, QCheckBox
 
 
 class SettingsSection(QWidget):
@@ -18,6 +18,7 @@ class SettingsSection(QWidget):
         self.settings.setValue("testing_amount", self.testing_set_size.value())
         self.settings.setValue("iteration_amount", self.iteration_size.value())
         self.settings.setValue("learning_rate", self.learning_rate.value())
+        self.settings.setValue("limit_to_one_initially", self.limit_to_one_initially.isChecked())
         self.save_button.setDisabled(True)
         self.save_button.setText("Saved")
 
@@ -47,13 +48,20 @@ class SettingsSection(QWidget):
         self.learning_rate.setValue(float(self.settings.value("learning_rate", 1e-4)))
         self.learning_rate.setAttribute(Qt.WA_MacShowFocusRect, False)
 
+        self.limit_to_one_initially = QCheckBox()
+        bool_val = self.settings.value("limit_to_one_initially") == "true"
+        self.limit_to_one_initially.setChecked(bool_val)
+        self.limit_to_one_initially.setAttribute(Qt.WA_MacShowFocusRect, False)
+
         self.testing_set_size.valueChanged.connect(self.changed)
         self.iteration_size.valueChanged.connect(self.changed)
         self.learning_rate.valueChanged.connect(self.changed)
+        self.limit_to_one_initially.stateChanged.connect(self.changed)
 
         self.overall_layout.addRow("Testing set size per iteration", self.testing_set_size)
         self.overall_layout.addRow("Neural Network number of iterations", self.iteration_size)
         self.overall_layout.addRow("Learning rate", self.learning_rate)
+        self.overall_layout.addRow("Limit to one image per set initially?", self.limit_to_one_initially)
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_settings)

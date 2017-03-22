@@ -18,5 +18,3 @@ class CustomComboBox(QComboBox):
         font.setPixelSize(11)
         font.setCapitalization(QFont.AllUppercase)
         self.setFont(font)
-        print(self.frameGeometry().height())
-

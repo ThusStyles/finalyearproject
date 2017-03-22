@@ -139,14 +139,11 @@ class MainWindow(QMainWindow):
         self.main_area_reports.focus()
 
     def set_iteration_stats(self, iteration_stats):
-        print("SETTING ITERATION STATS", iteration_stats)
         self.iteration_stats = iteration_stats
 
     def open_sets(self):
         fileName, filter = QFileDialog.getOpenFileName(self, 'Open sets save', PathHelpers.getPath("saves"),
                                                        "Set Files (*.sets)")
-
-        print("Opening ", fileName)
 
         if fileName:
             self.current_save = fileName

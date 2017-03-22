@@ -98,7 +98,6 @@ class SaveLoad(QObject):
         # Copy testing set to save
         testing_set = self.testing_images
         testing_set_len = len(testing_set)
-        print("SAVING ", testing_set_len, "TESTING IMAGES")
         total_len = testing_set_len
         current_item = 0
 
@@ -123,7 +122,6 @@ class SaveLoad(QObject):
                 self.finished_one_iteration(current_item / total_len, "Saving images")
 
         for set in self.sets:
-            print("DOING SET")
             images = set.all_images
             f.write(bytes('Set: ' + set.name + '\n', encoding="utf-8"))
             f.write(bytes("Icl: " + str(set.incorrectly_classified_local) + ',' +  str(set.incorrectly_classified) +' \n', encoding="utf-8"))

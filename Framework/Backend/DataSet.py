@@ -63,7 +63,6 @@ class DataSet(QObject):
         self.total_iterations = 0
         self.epochs_completed = 0
         self.training_limit = len(self.training_images)
-        print("TRAINING AMOUNT", len(self.training_images))
 
     def set_testing_data(self, images):
         self.all_testing_images = images
@@ -80,9 +79,7 @@ class DataSet(QObject):
         for x in self.all_testing_images[0:self.current_testing_max]:
             self.testing_images.append(x)
 
-        print("SIZE OF TESITNG IMAGES BEFORE", len(self.all_testing_images))
         self.all_testing_images = self.all_testing_images[self.current_testing_max:]
-        print("SIZE OF TESITNG IMAGES AFTER", len(self.all_testing_images))
 
         self.test_set_changed.emit(len(self.all_testing_images))
 

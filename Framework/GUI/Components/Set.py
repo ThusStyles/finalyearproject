@@ -32,7 +32,6 @@ class Set(QWidget):
         for index in range(self.image_grid.count()):
             items.append(self.image_grid.item(index))
 
-        print("SIZE OF ALL ", self.name, len(items), len(self.all_images))
         diff = [item for item in self.all_images if item not in items]
         for image in diff:
             self.addItem(image, False)
@@ -88,7 +87,6 @@ class Set(QWidget):
         self.move_to_set.emit("Trash", self)
 
     def new_set_with_selected(self):
-        print("New set with selected triggered")
         if len(self.image_grid.selectedIndexes()) == 0: return
         text, ok = InputDialog.dialog(self, 'Enter the new name for the new set:', "Set name...")
         if ok:
