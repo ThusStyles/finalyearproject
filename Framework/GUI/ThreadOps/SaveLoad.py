@@ -42,7 +42,7 @@ class SaveLoad(QObject):
                 if not image.title:
                     img_title = set.name + "-" + str(i) + ".tif"
                 new_img.save(os.path.join(set_dir, img_title))
-                self.finished_one_iteration(images_done / (total_image_count - 1), "Exporting set " + set.name)
+                self.finished_one_iteration((images_done + 1) / total_image_count, "Exporting set " + set.name)
 
         self.finished.emit()
 
@@ -52,8 +52,6 @@ class SaveLoad(QObject):
         inF.close()
         lines = s.decode("utf-8").splitlines()
         setName = None
-        training_images = []
-        testing_images = []
         reading_status = 0
         num_lines = len(lines)
         for i, line in enumerate(lines):
@@ -87,7 +85,7 @@ class SaveLoad(QObject):
                     # Reading iteration stats
                     self.set_iteration_stats.emit(image_plain)
 
-            self.finished_one_iteration(i / (num_lines - 1), "Loading images")
+            self.finished_one_iteration((i + 1) / num_lines, "Loading images")
 
         self.finished.emit()
 

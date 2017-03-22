@@ -24,8 +24,8 @@ class ReportsSection(QWidget):
 
         self.plot_bar(self.figure_1, self.canvas_1, x_data_1, y_data_1, "Items in each set", "Set name", "Number of items")
         self.plot_bar(self.figure_2, self.canvas_2, x_data_1, y_data_2, "Incorrectly classified in each set", "Set name", "Classified incorrectly")
-        if iteration_stats:
-            self.plot_line(self.figure_3, self.canvas_3, np.arange(len(iteration_stats)), iteration_stats, "Incorrectly classified in each iteration",
+        if iteration_stats and len(iteration_stats) > 1:
+            self.plot_line(self.figure_3, self.canvas_3, np.arange(len(iteration_stats))[1:], iteration_stats[1:], "Incorrectly classified in each iteration",
                   "Iteration", "Classified incorrectly")
 
     def init_ui(self):

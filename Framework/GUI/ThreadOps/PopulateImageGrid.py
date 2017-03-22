@@ -31,5 +31,5 @@ class PopulateImageGrid(QObject):
             image = image.reshape(44, -1)
             image = ImageHelpers.toQImage(image)
             self.added.emit(item, image)
-            self.one_iteration.emit(int((i / (filelist_len - 1)) * 100), "Loading images")
+            self.one_iteration.emit(int(((i + 1) / filelist_len) * 100), "Loading images")
         self.finished.emit()
