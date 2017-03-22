@@ -19,6 +19,8 @@ class Set(QWidget):
         self.name = name
         self.hidden = False
         self.create_new_set_linked = False
+        self.incorrectly_classified = 0
+        self.incorrectly_classified_local = 0
         self.init_ui()
         self.all_images = []
 
@@ -68,17 +70,17 @@ class Set(QWidget):
 
     def rename_set(self):
         text, ok = InputDialog.dialog(self, 'Enter the new name for set '  + self.name + ":", "Set name...")
-        if len(text) == 0:
-            self.show_error("You must enter a set name")
-        elif ok:
+        if ok:
+            if len(text) == 0:
+                return self.show_error("You must enter a set name")
             self.rename_set_sig.emit(self, text)
 
     def move_selected(self):
         if len(self.image_grid.selectedIndexes()) == 0: return
         text, ok = InputDialog.dialog(self, 'Enter the name of the set to move to:', "Set name...")
-        if len(text) == 0:
-            return self.show_error("You must enter a set name")
-        elif ok:
+        if ok:
+            if len(text) == 0:
+                return self.show_error("You must enter a set name")
             self.move_to_set.emit(text, self)
 
     def move_selected_trash(self):
@@ -89,9 +91,9 @@ class Set(QWidget):
         print("New set with selected triggered")
         if len(self.image_grid.selectedIndexes()) == 0: return
         text, ok = InputDialog.dialog(self, 'Enter the new name for the new set:', "Set name...")
-        if len(text) == 0:
-            return self.show_error("You must enter a set name")
-        elif ok:
+        if ok:
+            if len(text) == 0:
+                return self.show_error("You must enter a set name")
             self.create_new_set.emit(text, self)
 
     def show_error(self, message):

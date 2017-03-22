@@ -6,7 +6,7 @@ from Backend import DataSet
 from GUI.Components import ErrorDialog
 from GUI.Helpers import PathHelpers
 from GUI.Panels import DataInfoPanel, MenuPanel, ToolbarPanel
-from GUI.Sections import NeuralNetSection, SettingsSection
+from GUI.Sections import NeuralNetSection, SettingsSection, ReportsSection
 from GUI.ThreadOps import RunNeuralNet, SaveLoad
 from .TestingWindow import TestingWindow
 from .TrainingWindow import TrainingWindow
@@ -22,6 +22,7 @@ class MainWindow(QMainWindow):
         self.height = 560
         self.first_run = True
         self.current_save = None
+        self.iteration_stats = []
         self.settings = QSettings("Theo Styles", "Convolutional Neural Network")
         self.img_size = self.settings.value("img_size", 44)
         self.init_ui()
@@ -31,7 +32,7 @@ class MainWindow(QMainWindow):
         self.left_area.progressModule.progress.setValue(amount)
 
     def testing_finished(self, cls_pred):
-
+        self.main_area_reports.focus()
         for i, prob_array in enumerate(cls_pred):
             image = self.dataset.testing_images[i]
             pred_index = np.argmax(prob_array)
@@ -98,11 +99,13 @@ class MainWindow(QMainWindow):
         itemNames = []
         itemData = []
         setCount = 0
+        total_incorrect = 0
 
         for set in sets:
             setCount += 1
-            imageArea = set.image_grid
             itemCount = len(set.all_images)
+            total_incorrect += set.incorrectly_classified_local
+            set.incorrectly_classified_local = 0
             for index in range(itemCount):
                 item = set.all_images[index]
                 if item == None: continue
@@ -110,6 +113,7 @@ class MainWindow(QMainWindow):
                 itemData.append(item.imageData)
             set.clear()
 
+        self.iteration_stats.append(total_incorrect)
         self.dataset.add_sets_to_training_data(setCount, itemNames, itemData)
 
         if self.first_run or self.main_area_neural.initial_image_grid_visible:
@@ -130,6 +134,14 @@ class MainWindow(QMainWindow):
 
         self.run_neural_net()
 
+    def finished_opening_sets(self):
+        self.dataset.new_testing_data()
+        self.main_area_reports.focus()
+
+    def set_iteration_stats(self, iteration_stats):
+        print("SETTING ITERATION STATS", iteration_stats)
+        self.iteration_stats = iteration_stats
+
     def open_sets(self):
         fileName, filter = QFileDialog.getOpenFileName(self, 'Open sets save', PathHelpers.getPath("saves"),
                                                        "Set Files (*.sets)")
@@ -148,11 +160,12 @@ class MainWindow(QMainWindow):
             self.obj.create_set.connect(self.main_area_neural.create_new_set)
             self.obj.add_to_training_set.connect(self.main_area_neural.add_images_to_set)
             self.obj.add_to_testing_set.connect(self.dataset.add_to_testing_data)
-            self.obj.finished.connect(self.dataset.new_testing_data)
+            self.obj.set_iteration_stats.connect(self.set_iteration_stats)
+            self.obj.set_classified_info.connect(self.main_area_neural.set_classified_for_set)
+            self.obj.finished.connect(self.finished_opening_sets)
             self.thread.started.connect(self.obj.load_images)
 
             self.thread.start()
-
 
     def save_sets_as(self):
         self.current_save = None
@@ -172,7 +185,7 @@ class MainWindow(QMainWindow):
                 sets.append(self.main_area_neural.trash_set)
             self.current_save = fileName
             self.left_area.progressModule.progress.setDefault()
-            self.obj = SaveLoad(self.current_save, sets, self.dataset.all_testing_images)  # no parent!
+            self.obj = SaveLoad(self.current_save, sets, self.dataset.all_testing_images, iteration_stats=self.iteration_stats)  # no parent!
             self.thread = QThread()  # no parent!
 
             self.obj.moveToThread(self.thread)
@@ -180,8 +193,6 @@ class MainWindow(QMainWindow):
             self.thread.started.connect(self.obj.save_images)
 
             self.thread.start()
-            # os.remove(fileName)
-            # os.rename(fileName + ".gz", fileName)
 
     def deleted_set(self, set_name):
         self.datapanel.delete_training_row(set_name)
@@ -196,19 +207,26 @@ class MainWindow(QMainWindow):
         self.datapanel.set_testing_amount(amount)
 
     def switch_to_neural(self):
-        self.menu_changed(0)
+        self.left_area.menu.setCurrentRow(0)
 
     def switch_to_reports(self):
-        self.menu_changed(1)
+        self.left_area.menu.setCurrentRow(1)
 
     def switch_to_settings(self):
-        self.menu_changed(2)
+        self.left_area.menu.setCurrentRow(2)
 
     def menu_changed(self, index):
+        sets = self.main_area_neural.sets[:]
+        if self.main_area_neural.trash_set:
+            sets.append(self.main_area_neural.trash_set)
         self.main_area_neural.setVisible(False)
         self.main_area_settings.setVisible(False)
+        self.main_area_reports.setVisible(False)
         if index == 0:
             self.main_area_neural.setVisible(True)
+        elif index == 1:
+            self.main_area_reports.setVisible(True)
+            self.main_area_reports.focus(sets, self.iteration_stats)
         elif index == 2:
             self.main_area_settings.setVisible(True)
             self.main_area_settings.changed()
@@ -269,6 +287,10 @@ class MainWindow(QMainWindow):
         self.main_area_settings = SettingsSection()
         self.right_stacking_grid.addWidget(self.main_area_settings, 0, 0)
         self.main_area_settings.setVisible(False)
+
+        self.main_area_reports = ReportsSection(self.main_area_neural.sets, self.iteration_stats)
+        self.right_stacking_grid.addWidget(self.main_area_reports, 0, 0)
+        self.main_area_reports.setVisible(False)
 
 
         self.datapanel = DataInfoPanel()

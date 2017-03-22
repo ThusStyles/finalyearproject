@@ -76,6 +76,8 @@ class NeuralNetSection(QWidget):
         if self.dont_ask or ok:
             for oneSet in self.sets:
                 selectedItems = oneSet.image_grid.selectedItems()
+                oneSet.incorrectly_classified += len(selectedItems)
+                oneSet.incorrectly_classified_local += len(selectedItems)
                 for selectedItem in selectedItems:
                     item = oneSet.takeFromBoth(oneSet.image_grid.row(selectedItem))
                     set.addItem(item)
@@ -115,6 +117,8 @@ class NeuralNetSection(QWidget):
         if self.is_existing_set(name): return
         selected = old_set.image_grid.selectedItems()
         items = []
+        old_set.incorrectly_classified += len(selected)
+        old_set.incorrectly_classified_local += len(selected)
         for sItem in selected:
             item = old_set.takeFromBoth(old_set.image_grid.row(sItem))
             items.append(item)
@@ -123,11 +127,7 @@ class NeuralNetSection(QWidget):
     def move_to_set(self, name, old_set):
         if name == old_set.name: return
         selected = old_set.image_grid.selectedItems()
-        setToAdd = None
-        for set in self.sets:
-            if set.name == name:
-                setToAdd = set
-                break
+        setToAdd = self.get_set(name)
         if name == "Trash":
             if not self.trash_set:
                 self.trash_set = self.create_new_set("Trash", [])
@@ -136,6 +136,9 @@ class NeuralNetSection(QWidget):
         if not setToAdd:
             ErrorDialog.dialog(self, "Cannot find a set with that name")
             return
+
+        old_set.incorrectly_classified += len(selected)
+        old_set.incorrectly_classified_local += len(selected)
         for sItem in selected:
             item = old_set.takeFromBoth(old_set.image_grid.row(sItem))
             items.append(item)
@@ -186,13 +189,24 @@ class NeuralNetSection(QWidget):
         self.search_and_sort()
         return new_set
 
-    def add_images_to_set(self, name, items):
+    def get_set(self, set_name):
         for set in self.sets:
-            if set.name == name:
-                for item in items:
-                    set.add_image(item)
-                return
-        if name == "Trash" and self.trash_set:
+            if set.name == set_name:
+                return set
+        return None
+
+    def set_classified_for_set(self, set_name, incorrectly_classified_local, incorrectly_classified):
+        set = self.get_set(set_name)
+        if set:
+            set.incorrectly_classified = incorrectly_classified
+            set.incorrectly_classified_local = incorrectly_classified_local
+
+    def add_images_to_set(self, name, items):
+        to_add = self.get_set(name)
+        if to_add:
+            for item in items:
+                to_add.add_image(item)
+        elif name == "Trash" and self.trash_set:
             for item in items:
                 self.trash_set.add_image(item)
 
@@ -227,9 +241,9 @@ class NeuralNetSection(QWidget):
             self.show_error("Please select items to create a new set")
         else:
             text, ok = InputDialog.dialog(self, 'Enter the name for the new set:', "Set name...")
-            if len(text) == 0:
-                self.show_error("You must enter a set name")
-            elif ok:
+            if ok:
+                if len(text) == 0:
+                    return self.show_error("You must enter a set name")
                 for set in self.sets:
                     if set.name == text:
                         ErrorDialog.dialog(self, "There is already a set with this name")
@@ -239,7 +253,6 @@ class NeuralNetSection(QWidget):
                 index = self.initial_image_grid.currentRow()
                 self.add_or_create_set(text)
                 self.initial_image_grid.setCurrentRow(index)
-
 
     def show_error(self, message):
         ErrorDialog.dialog(self, message)
@@ -265,7 +278,6 @@ class NeuralNetSection(QWidget):
             sets_copy[match].setVisible(True)
 
     def sort_sets(self, sort_by):
-        new_sets = []
         sets_copy = self.sets[:]
 
         if self.trash_set:
@@ -384,5 +396,3 @@ class NeuralNetSection(QWidget):
 
         self.overall_layout.addWidget(self.main_splitter)
         self.setLayout(self.overall_layout)
-
-
