@@ -317,7 +317,7 @@ class NeuralNetSection(QWidget):
         self.top_layout = QHBoxLayout()
 
         self.initial_image_grid = ImageGrid()
-        self.add_button = CustomPushButton("+")
+        self.add_button = CustomPushButton("+ SET")
         self.add_button.setToolTip("Create a new set with the selected images")
         self.trash_button = CustomPushButton("DELETE")
         self.trash_button.clicked.connect(self.trash_clicked)
