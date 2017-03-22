@@ -1,6 +1,7 @@
 import numpy as np
+import sys
 from PyQt5.QtCore import QThread, QSettings
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QMainWindow, QSplitter, QAction, QFileDialog
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QMainWindow, QSplitter, QAction, QFileDialog, QDialog, QLabel
 
 from Backend import DataSet
 from GUI.Components import ErrorDialog
@@ -244,6 +245,24 @@ class MainWindow(QMainWindow):
         self.testing_window = TestingWindow(self, self.dataset.all_testing_images)
         self.testing_window.show()
 
+    def exit_app(self):
+        sys.exit(0)
+
+    def about_clicked(self):
+        d = QDialog(self)
+        layout = QVBoxLayout()
+        d.setLayout(layout)
+        layout.addWidget(QLabel("Convolutional Neural Network - Created By Theo Styles"))
+        layout.addWidget(QLabel("Credits:"))
+        layout.addWidget(QLabel("Play icon made by Google from www.flaticon.com"))
+        layout.addWidget(QLabel("Plus icon made by Madebyoliver from www.flaticon.com"))
+        layout.addWidget(QLabel("Export icon made by Popcic from www.flaticon.com"))
+        layout.addWidget(QLabel("Up arrow icon made by Google from www.flaticon.com"))
+        layout.addWidget(QLabel("Down arrow icon made by Google from www.flaticon.com"))
+        layout.addWidget(QLabel("Tick icon made by Eleonor Wang from www.flaticon.com"))
+        d.setWindowTitle("About")
+        d.exec_()
+
     def init_ui(self):
         self.settings = QSettings("Theo Styles", "Convolutional Neural Network")
         self.settings.setValue("test", 1)
@@ -334,11 +353,16 @@ class MainWindow(QMainWindow):
         open_action.setStatusTip('Open a sets save file')
         open_action.triggered.connect(self.open_sets)
 
+        exit_action = QAction("&Exit", self)
+        exit_action.setStatusTip('Exit the application')
+        exit_action.triggered.connect(self.exit_app)
+
         menubar = self.menuBar()
         file_menu = menubar.addMenu('&File')
         file_menu.addAction(open_action)
         file_menu.addAction(save_action)
         file_menu.addAction(save_action_as)
+        file_menu.addAction(exit_action)
 
         neural_action = QAction("&Neural Net", self)
         neural_action.setStatusTip('View the neural network')
@@ -379,5 +403,12 @@ class MainWindow(QMainWindow):
 
         run_menu = menubar.addMenu('&Run')
         run_menu.addAction(run_action)
+
+        about_action = QAction("&About", self)
+        about_action.setStatusTip('About the application')
+        about_action.triggered.connect(self.about_clicked)
+
+        help_menu = menubar.addMenu('&Help')
+        help_menu.addAction(about_action)
 
         self.show()
