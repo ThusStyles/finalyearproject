@@ -22,6 +22,7 @@ class MainWindow(QMainWindow):
         self.height = 560
         self.first_run = True
         self.current_save = None
+        self.running = False
         self.iteration_stats = []
         self.settings = QSettings("Theo Styles", "Convolutional Neural Network")
         self.img_size = self.settings.value("img_size", 44)
@@ -32,6 +33,7 @@ class MainWindow(QMainWindow):
         self.left_area.progressModule.progress.setValue(amount)
 
     def testing_finished(self, cls_pred):
+        self.running = False
         self.main_area_reports.focus()
         for i, prob_array in enumerate(cls_pred):
             image = self.dataset.testing_images[i]
@@ -88,18 +90,20 @@ class MainWindow(QMainWindow):
 
             self.thread.start()
 
-
     def run_clicked(self):
         sets = self.main_area_neural.sets
 
         if len(sets) == 0:
-            ErrorDialog.dialog(self, "Please create at least one set before running the neural network")
-            return
+            return ErrorDialog.dialog(self, "Please create at least one set before running the neural network")
+
+        if self.running:
+            return ErrorDialog.dialog(self, "The neural network is already running")
 
         itemNames = []
         itemData = []
         setCount = 0
         total_incorrect = 0
+        self.running = True
 
         for set in sets:
             setCount += 1
@@ -352,5 +356,28 @@ class MainWindow(QMainWindow):
         view_menu.addAction(neural_action)
         view_menu.addAction(reports_action)
         view_menu.addAction(settings_action)
+
+        import_action = QAction("&Import folder", self)
+        import_action.setStatusTip('Import a folder of images')
+        import_action.triggered.connect(self.add_toolbar_clicked)
+
+        export_action = QAction("&Export sets", self)
+        export_action.setStatusTip('Export sets to folder')
+        export_action.triggered.connect(self.export_sets)
+
+        settings_action = QAction("&Settings", self)
+        settings_action.setStatusTip('View settings')
+        settings_action.triggered.connect(self.switch_to_settings)
+
+        tools_menu = menubar.addMenu('&Tools')
+        tools_menu.addAction(import_action)
+        tools_menu.addAction(export_action)
+
+        run_action = QAction("&Run Neural Network", self)
+        run_action.setStatusTip('Start running the neural network')
+        run_action.triggered.connect(self.run_clicked)
+
+        run_menu = menubar.addMenu('&Run')
+        run_menu.addAction(run_action)
 
         self.show()
