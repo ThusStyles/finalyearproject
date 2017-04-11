@@ -2,6 +2,8 @@
 
 This software uses convolutional neural network and aims to generate a ground truth set in the smallest time possible with a minimum number of human interactions.
 
+All code for the software can be found at - https://git.cs.bham.ac.uk/trs433/fyp
+
 # Installation Instructions
 
 Several libraries are required to run the software, and are outlined below:
